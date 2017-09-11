@@ -2,7 +2,6 @@ package com.splitcriteria.timecard;
 
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.helper.ItemTouchHelper;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.TextView;
@@ -30,7 +29,7 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
         CardView v = (CardView) LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.project_view, parent, false);
+                .inflate(R.layout.card_project, parent, false);
         ViewHolder vh = new ViewHolder(v);
         return vh;
     }

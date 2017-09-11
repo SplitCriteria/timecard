@@ -3,16 +3,18 @@ package com.splitcriteria.timecard;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.Editable;
 import android.text.TextUtils;
+import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.support.design.widget.NavigationView;
 import android.support.v4.view.GravityCompat;
@@ -22,22 +24,22 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.Map;
-
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener {
+        implements NavigationView.OnNavigationItemSelectedListener,
+                   View.OnClickListener {
 
-    private static final String PROJECTS_DB_NAME = "projects.db";
+    public static final String PROJECTS_DB_NAME = "projects.db";
     private static final String TAG_CREATE_PROJECT_DIALOG = "dialog_project";
 
     private RecyclerView mRecyclerView;
     private RecyclerView.Adapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
     private ProjectData mProjectData;
+    private GestureDetectorCompat mGestures;
 
     public static class CreateProjectDialogFragment extends DialogFragment {
 
@@ -50,8 +52,9 @@ public class MainActivity extends AppCompatActivity
                     .inflate(R.layout.dialog_create_project, null);
             final EditText editText = view.findViewById(R.id.name);
             builder.setView(view)
-                   .setTitle("Create Project")
-                   .setPositiveButton("Create", new DialogInterface.OnClickListener() {
+                   .setTitle(R.string.title_create_project)
+                   .setPositiveButton(R.string.button_create,
+                           new DialogInterface.OnClickListener() {
                        @Override
                        public void onClick(DialogInterface dialogInterface, int i) {
                            // Add the new project name
@@ -59,19 +62,22 @@ public class MainActivity extends AppCompatActivity
                            boolean created = false;
                            if (!TextUtils.isEmpty(name)) {
                                // TODO Check against current projects
-                               created = ((MainActivity) getActivity()).mProjectData.addProject(name);
+                               created = ((MainActivity) getActivity())
+                                       .mProjectData.addProject(name);
                                ((MainActivity) getActivity()).refreshProjectNames();
                            }
                            if (created) {
-                               Toast.makeText(getActivity(), "Created '" + name + "'",
-                                       Toast.LENGTH_SHORT).show();
+                               Snackbar.make(((MainActivity)getActivity()).mRecyclerView,
+                                       R.string.project_created, Snackbar.LENGTH_SHORT)
+                                       .show();
                            } else {
+                               // TODO Provide error dialog to user instead of toast
                                Toast.makeText(getActivity(), "Couldn't create '" + name + "'",
                                        Toast.LENGTH_SHORT).show();
                            }
                        }
                    })
-                   .setNegativeButton("Cancel", null);
+                   .setNegativeButton(android.R.string.cancel, null);
             return builder.create();
         }
     }
@@ -89,8 +95,6 @@ public class MainActivity extends AppCompatActivity
             public void onClick(View view) {
                 new CreateProjectDialogFragment().show(getFragmentManager(),
                         TAG_CREATE_PROJECT_DIALOG);
-                //Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                //        .setAction("Action", null).show();
             }
         });
 
@@ -113,6 +117,33 @@ public class MainActivity extends AppCompatActivity
         mProjectData = new ProjectData(getApplicationContext(), PROJECTS_DB_NAME);
         // Refresh the project names
         refreshProjectNames();
+
+        // Set up the gesture detector
+        mGestures = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
+            @Override
+            public boolean onSingleTapUp(MotionEvent e) {
+                View clicked = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
+                if (clicked != null) {
+                    TextView tv = clicked.findViewById(R.id.name);
+                    String projectName = tv.getText().toString();
+                    Intent projectIntent = new Intent(getApplicationContext(),
+                                                      ProjectActivity.class);
+                    projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
+                    startActivity(projectIntent);
+                    return true;
+                } else {
+                    return false;
+                }
+            }
+        });
+
+        mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+            @Override
+            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
+                mGestures.onTouchEvent(e);
+                return super.onInterceptTouchEvent(rv, e);
+            }
+        });
     }
 
     private void refreshProjectNames() {
@@ -181,5 +212,10 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    @Override
+    public void onClick(View view) {
+
     }
 }

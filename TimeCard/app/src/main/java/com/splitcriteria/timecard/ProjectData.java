@@ -298,8 +298,8 @@ public class ProjectData {
             cursor.close();
             // Get the elapsed time of an ongoing timecard entry
             cursor = mDatabase.rawQuery(
-                    "SELECT strftime('%s','" + getDateTime() +  "') - " +
-                           "strftime('%s','" + KEY_START_TIME + "') AS 'time' " +
+                    "SELECT strftime('%s','" + getDateTime() + "') - " +
+                           "strftime('%s'," + KEY_START_TIME + ") AS 'time' " +
                     "FROM '" + project + "'" +
                     "WHERE " + KEY_END_TIME + " IS NULL;", null);
             timeIndex = cursor.getColumnIndex("time");

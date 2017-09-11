@@ -5,4 +5,23 @@
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
     <string name="action_settings">Settings</string>
+
+    <string name="title_create_project">Create Project</string>
+    <string name="button_create">Create</string>
+
+    <string name="project_created">Project Created</string>
+    <string name="project_clocked_in">Clocked In</string>
+    <string name="project_clocked_out">Clocked Out</string>
+    <string name="project_archived">Project Archived</string>
+    <string name="project_deleted">Project Deleted</string>
+
+    <string name="undo">Undo</string>
+
+    <string name="clock_in">Clock In</string>
+    <string name="clock_out">Clock Out</string>
+
+    <string name="time_none">No time clocked yet!</string>
+    <string name="time_with_days">%1$d days %2$d hr %3$d min %4$d sec</string>
+    <string name="time_without_days">%1$d hr %2$d min %3$d sec</string>
+    <string name="export">Export</string>
 </resources>
