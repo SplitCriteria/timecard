@@ -268,7 +268,7 @@ public class ProjectData {
                 }
                 return true;
             } else {
-                // Project is not checked in -- must be checked in first
+                // Project is not clocked in -- must be clocked in first
                 return false;
             }
         } else {

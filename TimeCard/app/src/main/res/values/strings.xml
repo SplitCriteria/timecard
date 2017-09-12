@@ -24,4 +24,7 @@
     <string name="time_with_days">%1$d days %2$d hr %3$d min %4$d sec</string>
     <string name="time_without_days">%1$d hr %2$d min %3$d sec</string>
     <string name="export">Export</string>
+
+    <string name="notification_title_check_in">Timecard: %1$s</string>
+    <string name="notification_text_check_in">Click to clock out from %1$s</string>
 </resources>
