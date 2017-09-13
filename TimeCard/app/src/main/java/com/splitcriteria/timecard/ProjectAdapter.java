@@ -6,13 +6,25 @@ import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * Created by Deuce on 9/9/17.
  */
 
 public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
 
-    private String[] mProjects;
+    private List<String> mProjects = new ArrayList<>();
+    private Comparator<String> mIgnoreCaseStringComparator = new Comparator<String>() {
+        @Override
+        public int compare(String s, String t1) {
+            return s.compareToIgnoreCase(t1);
+        }
+    };
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         public CardView mCardView;
@@ -23,7 +35,10 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
     }
 
     public ProjectAdapter(String[] projects) {
-        mProjects = projects;
+        // Add all the project names
+        mProjects.addAll(Arrays.asList(projects));
+        // Sort them, ignoring the case
+        Collections.sort(mProjects, mIgnoreCaseStringComparator);
     }
 
     @Override
@@ -37,12 +52,32 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
         ((TextView)holder.mCardView.findViewById(R.id.name))
-                .setText(mProjects[position]);
+                .setText(mProjects.get(position));
     }
 
     @Override
     public int getItemCount() {
-        return mProjects.length;
+        return mProjects.size();
+    }
+
+    public String getProjectName(int adapterPosition) {
+        return adapterPosition < mProjects.size() ? mProjects.get(adapterPosition) : null;
+    }
+
+    public void remove(int adapterPosition) {
+        mProjects.remove(adapterPosition);
+        notifyItemRemoved(adapterPosition);
+    }
+
+    public void add(String projectName) {
+        // Add the project name (list is now unsorted)
+        mProjects.add(projectName);
+        // Sort the project names, ignoring the case
+        Collections.sort(mProjects, mIgnoreCaseStringComparator);
+        // Get the position of the newly inserted item
+        int position = mProjects.indexOf(projectName);
+        // Notify listeners of the newly inserted item
+        notifyItemInserted(position);
     }
 
 }

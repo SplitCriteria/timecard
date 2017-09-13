@@ -6,14 +6,17 @@
 
     <string name="action_settings">Settings</string>
 
+    <string name="title_current_projects">TimeCard</string>
+    <string name="title_archived_projects">TimeCard (archived)</string>
     <string name="title_create_project">Create Project</string>
     <string name="button_create">Create</string>
 
     <string name="project_created">Project Created</string>
     <string name="project_clocked_in">Clocked In</string>
     <string name="project_clocked_out">Clocked Out</string>
-    <string name="project_archived">Project Archived</string>
-    <string name="project_deleted">Project Deleted</string>
+    <string name="project_archived">Project \'%1$s\' archived</string>
+    <string name="project_unarchived">Project \'%1$s\' un-archived</string>
+    <string name="project_deleted">Project \'%1$s\' deleted!</string>
 
     <string name="undo">Undo</string>
 
@@ -27,4 +30,7 @@
 
     <string name="notification_title_check_in">Timecard: %1$s</string>
     <string name="notification_text_check_in">Click to clock out from %1$s</string>
+
+    <string name="menu_current_projects">Current Projects</string>
+    <string name="menu_archived_projects">Archived Projects</string>
 </resources>

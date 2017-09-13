@@ -11,6 +11,7 @@ import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -29,18 +30,23 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity
-        implements NavigationView.OnNavigationItemSelectedListener,
-                   View.OnClickListener {
+        implements NavigationView.OnNavigationItemSelectedListener {
 
     public static final String PROJECTS_DB_NAME = "projects.db";
     private static final String TAG_CREATE_PROJECT_DIALOG = "dialog_project";
 
     private RecyclerView mRecyclerView;
-    private RecyclerView.Adapter mAdapter;
+    private ProjectAdapter mAdapter;
     private RecyclerView.LayoutManager mLayoutManager;
     private ProjectData mProjectData;
     private GestureDetectorCompat mGestures;
+    private boolean mShowingArchived = false;
+    private ItemTouchHelper mCurrentProjectsItemTouchHelper;
+    private ItemTouchHelper mArchivedProjectsItemTouchHelper;
 
+    /**
+     * Dialog Fragment designed to collect the initial project information from the user
+     */
     public static class CreateProjectDialogFragment extends DialogFragment {
 
         public CreateProjectDialogFragment() {}
@@ -115,10 +121,8 @@ public class MainActivity extends AppCompatActivity
         mRecyclerView.setLayoutManager(mLayoutManager);
         // Get the project data
         mProjectData = new ProjectData(getApplicationContext(), PROJECTS_DB_NAME);
-        // Refresh the project names
-        refreshProjectNames();
 
-        // Set up the gesture detector
+        // Set up the gesture detector to open the ProjectActivity on a user click
         mGestures = new GestureDetectorCompat(this, new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
@@ -137,6 +141,7 @@ public class MainActivity extends AppCompatActivity
             }
         });
 
+        // Add a OnItemTouchListener to collect information for the GestureDetector
         mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
             @Override
             public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
@@ -144,11 +149,132 @@ public class MainActivity extends AppCompatActivity
                 return super.onInterceptTouchEvent(rv, e);
             }
         });
+
+        // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
+        // user to swipe right to archive a project)
+        mCurrentProjectsItemTouchHelper = new ItemTouchHelper(
+                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.RIGHT) {
+            @Override
+            public boolean onMove(RecyclerView recyclerView,
+                                  RecyclerView.ViewHolder viewHolder,
+                                  RecyclerView.ViewHolder target) {
+                // No up/down moves implemented
+                return false;
+            }
+
+            @Override
+            public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                // Archive on a right swipe
+                if (direction == ItemTouchHelper.RIGHT) {
+                    // Get the project name
+                    final int adapterPosition = viewHolder.getAdapterPosition();
+                    final String projectName = mAdapter.getProjectName(adapterPosition);
+                    // Remove the project from the adapter
+                    mAdapter.remove(viewHolder.getAdapterPosition());
+                    // Add a snackbar message with the ability to UNDO the action
+                    Snackbar sb = Snackbar.make(mRecyclerView,
+                            getString(R.string.project_archived, projectName),
+                            Snackbar.LENGTH_LONG);
+                    // Set an undo action
+                    sb.setAction(R.string.undo, new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view) {
+                            // The project is only archived after the dismissal, so we
+                            // just need to add the project name back to the adapter
+                            mAdapter.add(projectName);
+                        }
+                    });
+                    sb.addCallback(new Snackbar.Callback() {
+                        @Override
+                        public void onDismissed(Snackbar transientBottomBar, int event) {
+                            if (event != DISMISS_EVENT_ACTION) {
+                                // The snackbar timed out, or was dismissed
+                                // -- archive the project
+                                mProjectData.setArchived(projectName, true);
+                            }
+                            super.onDismissed(transientBottomBar, event);
+                        }
+                    });
+                    // Show the snackbar
+                    sb.show();
+                }
+            }
+        });
+
+        // Create an ItemTouchHelper to handle swipe events for archived projects (i.e. allow
+        // user to swipe right to delete a project and swipe left to unarchive a project)
+        mArchivedProjectsItemTouchHelper = new ItemTouchHelper(
+                new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT | ItemTouchHelper.RIGHT) {
+                    @Override
+                    public boolean onMove(RecyclerView recyclerView,
+                                          RecyclerView.ViewHolder viewHolder,
+                                          RecyclerView.ViewHolder target) {
+                        // No up/down moves implemented
+                        return false;
+                    }
+
+                    @Override
+                    public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
+                        // Get the project name
+                        final int adapterPosition = viewHolder.getAdapterPosition();
+                        final String projectName = mAdapter.getProjectName(adapterPosition);
+                        // Remove the project from the adapter
+                        mAdapter.remove(viewHolder.getAdapterPosition());
+                        final boolean delete = (direction == ItemTouchHelper.RIGHT);
+                        // Add a snackbar message with the ability to UNDO the action
+                        Snackbar sb = Snackbar.make(mRecyclerView,
+                                getString(delete ? R.string.project_deleted :
+                                                   R.string.project_unarchived,
+                                          projectName),
+                                Snackbar.LENGTH_LONG);
+                        // Set an undo action
+                        sb.setAction(R.string.undo, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View view) {
+                                // The project is only deleted/un-archived after the dismissal,
+                                // so we just need to add the project name back to the adapter
+                                mAdapter.add(projectName);
+                            }
+                        });
+                        // Add a callback to handle the deletion or un-archive after the
+                        // snackbar is dismissed (or timed out)
+                        sb.addCallback(new Snackbar.Callback() {
+                            @Override
+                            public void onDismissed(Snackbar transientBottomBar, int event) {
+                                if (event != DISMISS_EVENT_ACTION) {
+                                    // The snackbar timed out, or was dismissed
+                                    // -- delete/un-archive the project
+                                    if (delete) {
+                                        mProjectData.deleteProject(projectName);
+                                    } else {
+                                        mProjectData.setArchived(projectName, false);
+                                    }
+                                }
+                                super.onDismissed(transientBottomBar, event);
+                            }
+                        });
+                        // Show the snackbar
+                        sb.show();
+                    }
+                });
+
+        // Refresh the project names
+        refreshProjectNames();
     }
 
     private void refreshProjectNames() {
-        mAdapter = new ProjectAdapter(mProjectData.getProjectNames(false));
-        mRecyclerView.setAdapter(mAdapter);
+        mAdapter = new ProjectAdapter(mProjectData.getProjectNames(mShowingArchived));
+        mRecyclerView.swapAdapter(mAdapter, true);
+        Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
+        if (mShowingArchived) {
+            mCurrentProjectsItemTouchHelper.attachToRecyclerView(null);
+            mArchivedProjectsItemTouchHelper.attachToRecyclerView(mRecyclerView);
+            toolbar.setTitle(R.string.title_archived_projects);
+        } else {
+            mArchivedProjectsItemTouchHelper.attachToRecyclerView(null);
+            mCurrentProjectsItemTouchHelper.attachToRecyclerView(mRecyclerView);
+            toolbar.setTitle(R.string.title_current_projects);
+        }
     }
 
     @Override
@@ -195,27 +321,18 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
-        if (id == R.id.nav_camera) {
-            // Handle the camera action
-        } else if (id == R.id.nav_gallery) {
-
-        } else if (id == R.id.nav_slideshow) {
-
-        } else if (id == R.id.nav_manage) {
-
-        } else if (id == R.id.nav_share) {
-
-        } else if (id == R.id.nav_send) {
-
+        if (id == R.id.current_projects && mShowingArchived) {
+            // User wants to see current projects and they're not already shown
+            mShowingArchived = false;
+            refreshProjectNames();
+        } else if (id == R.id.archived_projects && !mShowingArchived) {
+            // User wants to see the archived projects and they're not already shown
+            mShowingArchived = true;
+            refreshProjectNames();
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
-    }
-
-    @Override
-    public void onClick(View view) {
-
     }
 }

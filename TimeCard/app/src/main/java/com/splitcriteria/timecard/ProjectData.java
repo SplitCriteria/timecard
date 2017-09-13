@@ -139,7 +139,7 @@ public class ProjectData {
      * @param archive   true to archive, false to un-archive
      * @return
      */
-    public boolean setProject(String project, boolean archive) {
+    public boolean setArchived(String project, boolean archive) {
         if (exists(project)) {
             ContentValues cv = new ContentValues();
             cv.put(KEY_ARCHIVED, archive ? 1 : 0);
