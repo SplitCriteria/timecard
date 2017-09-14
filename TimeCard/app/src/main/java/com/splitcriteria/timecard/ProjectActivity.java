@@ -1,10 +1,15 @@
 package com.splitcriteria.timecard;
 
+import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Handler;
+import android.os.ParcelFileDescriptor;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
@@ -16,6 +21,13 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+
+import java.io.BufferedOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.util.Iterator;
+import java.util.Map;
 
 public class ProjectActivity extends AppCompatActivity implements
         View.OnClickListener {
@@ -37,6 +49,8 @@ public class ProjectActivity extends AppCompatActivity implements
     static final String ACTION_CLOCK_OUT = "com.splitcriteria.timecard.CLOCK_OUT";
 
     private static final int NOTIFICATION_CLOCK_OUT_ID = 1;
+
+    private static final int REQUEST_CODE_CREATE_DOCUMENT = 1;
 
     private Runnable mUpdateTimeRunnable = new Runnable() {
         @Override
@@ -119,9 +133,59 @@ public class ProjectActivity extends AppCompatActivity implements
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.export:
+                // Allow the user to pick a file destination from the storage
+                // access framework
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                // Only allow files which can be opened
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                // Set the MIME type to comma-separated variables
+                intent.setType("text/csv");
+                // Set a default title
+                intent.putExtra(Intent.EXTRA_TITLE, mProjectName + ".csv");
+                // Start the activity to get the file
+                startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE_CREATE_DOCUMENT && resultCode == Activity.RESULT_OK) {
+            if (data != null) {
+                Uri uri = data.getData();
+                new AsyncTask<Uri, Void, Boolean>() {
+                    @Override
+                    protected Boolean doInBackground(Uri... uri) {
+                        boolean isError = false;
+                        try {
+                            OutputStream os = new BufferedOutputStream(
+                                    getContentResolver().openOutputStream(uri[0], "w"));
+                            isError = !mProjectData.dumpToCSV(mProjectName, os);
+                            os.close();
+                        } catch (IOException exception) {
+                            isError = true;
+                        }
+                        return isError;
+                    }
+
+                    @Override
+                    protected void onPostExecute(Boolean isError) {
+                        if (isError) {
+                            Snackbar.make(mProjectTime,
+                                    getString(R.string.exported_error, mProjectName),
+                                    Snackbar.LENGTH_SHORT).show();
+                        } else {
+                            Snackbar.make(mProjectTime,
+                                    getString(R.string.exported_success, mProjectName),
+                                    Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+                }.execute(uri);
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
         }
     }
 

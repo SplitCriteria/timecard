@@ -33,4 +33,7 @@
 
     <string name="menu_current_projects">Current Projects</string>
     <string name="menu_archived_projects">Archived Projects</string>
+
+    <string name="exported_error">Failed to export \'%1$s\'</string>
+    <string name="exported_success">Exported \'%1$s\'</string>
 </resources>

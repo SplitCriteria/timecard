@@ -7,6 +7,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.ArrayMap;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -316,5 +319,27 @@ public class ProjectData {
 
     public void close() {
         mDBHelper.close();
+    }
+
+    public boolean dumpToCSV(String project, OutputStream os) {
+        if (exists(project)) {
+            Cursor cursor = mDatabase.rawQuery("SELECT * FROM '" + project + "';", null);
+            try {
+                os.write((KEY_START_TIME + "," + KEY_END_TIME + "\n").getBytes("utf-8"));
+                int startIndex = cursor.getColumnIndex(KEY_START_TIME);
+                int endIndex = cursor.getColumnIndex(KEY_END_TIME);
+                while (cursor.moveToNext()) {
+                    String output = cursor.getString(startIndex) + "," +
+                                    cursor.getString(endIndex) + "\n";
+                    os.write(output.getBytes("utf-8"));
+                }
+            } catch (IOException exception) {
+                return false;
+            }
+            return true;
+        } else {
+            // Project name doesn't exist
+            return false;
+        }
     }
 }
