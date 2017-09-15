@@ -3,15 +3,12 @@ package com.splitcriteria.timecard;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
-import android.os.ParcelFileDescriptor;
 import android.support.design.widget.Snackbar;
-import android.support.v4.app.TaskStackBuilder;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
@@ -23,11 +20,8 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.BufferedOutputStream;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.Iterator;
-import java.util.Map;
 
 public class ProjectActivity extends AppCompatActivity implements
         View.OnClickListener {
@@ -46,7 +40,9 @@ public class ProjectActivity extends AppCompatActivity implements
 
     private static final long TIME_UPDATE_DELAY = 1000; // 1 second
 
-    static final String ACTION_CLOCK_OUT = "com.splitcriteria.timecard.CLOCK_OUT";
+    static final String ACTION_CLOCK_IN = "com.splitcriteria.action.CLOCK_IN";
+    static final String ACTION_CLOCK_OUT = "com.splitcriteria.action.CLOCK_OUT";
+    static final String ACTION_CLOCK_TOGGLE = "com.splitcriteria.action.CLOCK_TOGGLE";
 
     private static final int NOTIFICATION_CLOCK_OUT_ID = 1;
 
@@ -104,16 +100,21 @@ public class ProjectActivity extends AppCompatActivity implements
                 Snackbar.make(view, R.string.project_clocked_out, Snackbar.LENGTH_SHORT).show();
                 // Remove the time updater
                 mTimeUpdater.removeCallbacks(mUpdateTimeRunnable);
-                // Remove any notification
-                ((NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE))
-                        .cancel(mProjectName, NOTIFICATION_CLOCK_OUT_ID);
+                // Remove any notification using our broadcast receiver
+                Intent intent = new Intent(this, ProjectReceiverClockInOut.class);
+                intent.putExtra(Intent.EXTRA_TEXT, mProjectName);
+                intent.setAction(ACTION_CLOCK_OUT);
+                sendBroadcast(intent);
             } else {
                 mProjectData.clockIn(mProjectName);
                 Snackbar.make(view, R.string.project_clocked_in, Snackbar.LENGTH_SHORT).show();
                 // Add the time updater
                 mTimeUpdater.post(mUpdateTimeRunnable);
-                // Add a notification to allow the user to quickly clock out
-                postNotification();
+                // Post a notification using our broadcast receiver
+                Intent intent = new Intent(this, ProjectReceiverClockInOut.class);
+                intent.putExtra(Intent.EXTRA_TEXT, mProjectName);
+                intent.setAction(ACTION_CLOCK_IN);
+                sendBroadcast(intent);
             }
             // Invert the clocked in flag
             mIsClockedIn = !mIsClockedIn;
@@ -220,35 +221,5 @@ public class ProjectActivity extends AppCompatActivity implements
                     R.string.time_without_days, hours, minutes, seconds);
         }
         mProjectTime.setText(timeText);
-    }
-
-    private void postNotification() {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(this)
-                .setSmallIcon(R.drawable.ic_menu_send)
-                .setContentTitle(
-                        getString(R.string.notification_title_check_in, mProjectName))
-                .setContentText(
-                        getString(R.string.notification_text_check_in, mProjectName))
-                .setChannel(mProjectName)
-                .setAutoCancel(true)
-                .setOngoing(true);
-
-        // Build the task stack so pressing the back button will go to MainActivity
-        TaskStackBuilder stackBuilder = TaskStackBuilder.create(this);
-        // Add the ProjectActivity Intent with a CLOCK_OUT action
-        stackBuilder.addParentStack(ProjectActivity.class);
-        Intent projectIntent = new Intent(this, ProjectActivity.class);
-        projectIntent.putExtra(Intent.EXTRA_TEXT, mProjectName);
-        projectIntent.setAction(ACTION_CLOCK_OUT);
-        stackBuilder.addNextIntent(projectIntent);
-
-        // Create the PendingIntent
-        PendingIntent projectPendingIntent = stackBuilder.getPendingIntent(
-                0, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        builder.setContentIntent(projectPendingIntent);
-        NotificationManager notificationManager =
-                (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(mProjectName, NOTIFICATION_CLOCK_OUT_ID, builder.build());
     }
 }
