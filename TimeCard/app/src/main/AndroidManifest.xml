@@ -40,7 +40,9 @@
                 android:name="android.appwidget.provider"
                 android:resource="@xml/project_checkin_widget_info" />
         </receiver>
-        <receiver android:name=".ProjectReceiverClockInOut">
+        <receiver
+            android:name=".ProjectReceiverClockInOut"
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.splitcriteria.action.CLOCK_IN"/>
                 <action android:name="com.splitcriteria.action.CLOCK_OUT"/>

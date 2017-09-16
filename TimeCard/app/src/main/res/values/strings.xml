@@ -41,6 +41,7 @@
     <string name="broadcast_clock_in">%1$s: \'%2$s\' clocked in</string>
     <string name="broadcast_error">%1$s: broadcast error</string>
 
+    <string name="widget_config_instructions">Select a project to create a widget. Once created, click the widget to clock in/out.</string>
     <string name="widget_finish_config">Create Widget</string>
     <string name="widget_no_project_selected">You must select a project</string>
 </resources>

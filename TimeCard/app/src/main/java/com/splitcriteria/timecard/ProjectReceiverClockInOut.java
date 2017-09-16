@@ -16,6 +16,29 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
 
     static final int NOTIFICATION_CLOCK_OUT_ID = 1;
 
+    static final String ACTION_CLOCK_IN = "com.splitcriteria.action.CLOCK_IN";
+    static final String ACTION_CLOCK_OUT = "com.splitcriteria.action.CLOCK_OUT";
+    static final String ACTION_CLOCK_TOGGLE = "com.splitcriteria.action.CLOCK_TOGGLE";
+
+    public static Intent getClockInIntent(Context context, String projectName) {
+        return getClockActionIntent(context, projectName, ACTION_CLOCK_IN);
+    }
+
+    public static Intent getClockOutIntent(Context context, String projectName) {
+        return getClockActionIntent(context, projectName, ACTION_CLOCK_OUT);
+    }
+
+    public static Intent getClockToggleIntent(Context context, String projectName) {
+        return getClockActionIntent(context, projectName, ACTION_CLOCK_TOGGLE);
+    }
+
+    public static Intent getClockActionIntent(Context context, String projectName, String action) {
+        Intent intent = new Intent(context, ProjectReceiverClockInOut.class);
+        intent.putExtra(Intent.EXTRA_TEXT, projectName);
+        intent.setAction(action);
+        return intent;
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent != null) {
@@ -31,13 +54,13 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
             ProjectData pd = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
             boolean isClockedIn = pd.isClockedIn(projectName);
             if (action != null) {
-                if (action.equals(ProjectActivity.ACTION_CLOCK_OUT) ||
-                        (action.equals(ProjectActivity.ACTION_CLOCK_TOGGLE) && isClockedIn)) {
+                if (action.equals(ACTION_CLOCK_OUT) ||
+                        (action.equals(ACTION_CLOCK_TOGGLE) && isClockedIn)) {
                     pd.clockOut(projectName);
                     userMessage = clockOutMessage;
                     removeNotification(context, projectName);
-                } else if (action.equals(ProjectActivity.ACTION_CLOCK_IN) ||
-                        (action.equals(ProjectActivity.ACTION_CLOCK_TOGGLE) && !isClockedIn)) {
+                } else if (action.equals(ACTION_CLOCK_IN) ||
+                        (action.equals(ACTION_CLOCK_TOGGLE) && !isClockedIn)) {
                     pd.clockIn(projectName);
                     userMessage = clockInMessage;
                     postNotification(context, projectName);
@@ -70,9 +93,7 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
                 .setOngoing(true);
 
         // Build an intent to clock out the project using a broadcast receiver
-        Intent intent = new Intent(context, ProjectReceiverClockInOut.class);
-        intent.putExtra(Intent.EXTRA_TEXT, projectName);
-        intent.setAction(ProjectActivity.ACTION_CLOCK_OUT);
+        Intent intent = getClockOutIntent(context, projectName);
         PendingIntent projectPendingIntent = PendingIntent.getBroadcast(
                 context, 0, intent, PendingIntent.FLAG_ONE_SHOT);
 

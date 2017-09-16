@@ -77,9 +77,7 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
 
         // Create a broadcast intent to clock in/out the widget
-        Intent intent = new Intent(this, ProjectReceiverClockInOut.class);
-        intent.setAction(ProjectActivity.ACTION_CLOCK_TOGGLE);
-        intent.putExtra(Intent.EXTRA_TEXT, mSelectedProject);
+        Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(this, mSelectedProject);
         PendingIntent pendingIntent = PendingIntent.getBroadcast(
                 this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
 

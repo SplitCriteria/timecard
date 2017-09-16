@@ -1,9 +1,6 @@
 package com.splitcriteria.timecard;
 
 import android.app.Activity;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -11,7 +8,6 @@ import android.os.Handler;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -39,10 +35,6 @@ public class ProjectActivity extends AppCompatActivity implements
     private static final int SEC_PER_MIN = 60;
 
     private static final long TIME_UPDATE_DELAY = 1000; // 1 second
-
-    static final String ACTION_CLOCK_IN = "com.splitcriteria.action.CLOCK_IN";
-    static final String ACTION_CLOCK_OUT = "com.splitcriteria.action.CLOCK_OUT";
-    static final String ACTION_CLOCK_TOGGLE = "com.splitcriteria.action.CLOCK_TOGGLE";
 
     private static final int NOTIFICATION_CLOCK_OUT_ID = 1;
 
@@ -73,15 +65,7 @@ public class ProjectActivity extends AppCompatActivity implements
         mProjectTime = (TextView)findViewById(R.id.time);
         // Get a reference to the project data
         mProjectData = new ProjectData(this, MainActivity.PROJECTS_DB_NAME);
-
-        // Check for a CLOCK_OUT action
-        String action = getIntent().getAction();
-        if (action != null && action.equals(ACTION_CLOCK_OUT)) {
-            mProjectData.clockOut(mProjectName);
-            Snackbar.make(mClockInOutButton, R.string.project_clocked_out,
-                    Snackbar.LENGTH_LONG).show();
-        }
-
+        // Set the "clocked in" flag
         mIsClockedIn = mProjectData.isClockedIn(mProjectName);
         // Set the text for the clock in/out button.
         refreshClockInOutButton();
@@ -101,20 +85,14 @@ public class ProjectActivity extends AppCompatActivity implements
                 // Remove the time updater
                 mTimeUpdater.removeCallbacks(mUpdateTimeRunnable);
                 // Remove any notification using our broadcast receiver
-                Intent intent = new Intent(this, ProjectReceiverClockInOut.class);
-                intent.putExtra(Intent.EXTRA_TEXT, mProjectName);
-                intent.setAction(ACTION_CLOCK_OUT);
-                sendBroadcast(intent);
+                sendBroadcast(ProjectReceiverClockInOut.getClockOutIntent(this, mProjectName));
             } else {
                 mProjectData.clockIn(mProjectName);
                 Snackbar.make(view, R.string.project_clocked_in, Snackbar.LENGTH_SHORT).show();
                 // Add the time updater
                 mTimeUpdater.post(mUpdateTimeRunnable);
                 // Post a notification using our broadcast receiver
-                Intent intent = new Intent(this, ProjectReceiverClockInOut.class);
-                intent.putExtra(Intent.EXTRA_TEXT, mProjectName);
-                intent.setAction(ACTION_CLOCK_IN);
-                sendBroadcast(intent);
+                sendBroadcast(ProjectReceiverClockInOut.getClockInIntent(this, mProjectName));
             }
             // Invert the clocked in flag
             mIsClockedIn = !mIsClockedIn;

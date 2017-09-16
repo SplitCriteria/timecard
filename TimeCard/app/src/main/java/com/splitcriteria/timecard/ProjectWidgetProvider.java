@@ -23,11 +23,9 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
                     .getString(Intent.EXTRA_TEXT);
 
             // Create a broadcast intent to clock in/out the widget
-            Intent intent = new Intent(context, ProjectReceiverClockInOut.class);
-            intent.setAction(ProjectActivity.ACTION_CLOCK_TOGGLE);
-            intent.putExtra(Intent.EXTRA_TEXT, projectName);
+            Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(context, projectName);
             PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                    context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+                    context, 0, intent, PendingIntent.FLAG_ONE_SHOT);
 
             // Set up the widget view
             RemoteViews views = new RemoteViews(context.getPackageName(),
