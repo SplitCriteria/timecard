@@ -11,6 +11,10 @@
     <string name="title_create_project">Create Project</string>
     <string name="button_create">Create</string>
 
+    <string name="error_title">Error</string>
+    <string name="error_project_exists">A project already exists named \'%1$s\'.</string>
+    <string name="error_create">Error creating project \'%1$s\'</string>
+
     <string name="project_created">Project Created</string>
     <string name="project_clocked_in">Clocked In</string>
     <string name="project_clocked_out">Clocked Out</string>

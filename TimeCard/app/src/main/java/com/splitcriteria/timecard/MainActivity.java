@@ -33,7 +33,8 @@ public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
     public static final String PROJECTS_DB_NAME = "projects.db";
-    private static final String TAG_CREATE_PROJECT_DIALOG = "dialog_project";
+    private static final String TAG_DIALOG_CREATE_PROJECT = "dialog_project";
+    private static final String TAG_DIALOG_SIMPLE_MESSAGE = "simple_message";
 
     private RecyclerView mRecyclerView;
     private ProjectAdapter mAdapter;
@@ -43,6 +44,40 @@ public class MainActivity extends AppCompatActivity
     private boolean mShowingArchived = false;
     private ItemTouchHelper mCurrentProjectsItemTouchHelper;
     private ItemTouchHelper mArchivedProjectsItemTouchHelper;
+
+    /**
+     * Dialog Fragment designed to display a message to a user
+     */
+    public static class SimpleMessageDialogFragment extends DialogFragment {
+
+        static final String TITLE = "title";
+        static final String MESSAGE = "message";
+
+        public SimpleMessageDialogFragment() {}
+
+        public static SimpleMessageDialogFragment buildSimpleMessageDialog(
+                String title, String message) {
+            SimpleMessageDialogFragment dialogFragment = new SimpleMessageDialogFragment();
+            Bundle args = new Bundle();
+            args.putString(TITLE, title);
+            args.putString(MESSAGE, message);
+            dialogFragment.setArguments(args);
+            return dialogFragment;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            Bundle arguments = getArguments();
+            String title = arguments.getString(TITLE);
+            String message = arguments.getString(MESSAGE);
+            builder.setTitle(title)
+                    .setMessage(message)
+                    .setPositiveButton(android.R.string.ok, null)
+                    .setNegativeButton(android.R.string.cancel, null);
+            return builder.create();
+        }
+    }
 
     /**
      * Dialog Fragment designed to collect the initial project information from the user
@@ -63,24 +98,28 @@ public class MainActivity extends AppCompatActivity
                            new DialogInterface.OnClickListener() {
                        @Override
                        public void onClick(DialogInterface dialogInterface, int i) {
+                           // Get a reference to the owning activity
+                           MainActivity activity = (MainActivity)getActivity();
                            // Add the new project name
                            String name = editText.getText().toString();
-                           boolean created = false;
                            if (!TextUtils.isEmpty(name)) {
-                               // TODO Check against current projects
-                               created = ((MainActivity) getActivity())
-                                       .mProjectData.addProject(name);
-                               ((MainActivity) getActivity()).refreshProjectNames();
+                               if (activity.mProjectData.exists(name)) {
+                                   activity.alert(
+                                           activity.getString(R.string.error_title),
+                                           activity.getString(R.string.error_project_exists, name));
+                               } else {
+                                   if (activity.mProjectData.addProject(name)) {
+                                       Snackbar.make(
+                                               activity.mRecyclerView, R.string.project_created,
+                                               Snackbar.LENGTH_SHORT).show();
+                                   } else {
+                                       activity.alert(activity.getString(R.string.error_title),
+                                               activity.getString(R.string.error_create, name));
+                                   }
+                                   activity.refreshProjectNames();
+                               }
                            }
-                           if (created) {
-                               Snackbar.make(((MainActivity)getActivity()).mRecyclerView,
-                                       R.string.project_created, Snackbar.LENGTH_SHORT)
-                                       .show();
-                           } else {
-                               // TODO Provide error dialog to user instead of toast
-                               Toast.makeText(getActivity(), "Couldn't create '" + name + "'",
-                                       Toast.LENGTH_SHORT).show();
-                           }
+                           dismissAllowingStateLoss();
                        }
                    })
                    .setNegativeButton(android.R.string.cancel, null);
@@ -100,7 +139,7 @@ public class MainActivity extends AppCompatActivity
             @Override
             public void onClick(View view) {
                 new CreateProjectDialogFragment().show(getFragmentManager(),
-                        TAG_CREATE_PROJECT_DIALOG);
+                        TAG_DIALOG_CREATE_PROJECT);
             }
         });
 
@@ -333,5 +372,10 @@ public class MainActivity extends AppCompatActivity
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         drawer.closeDrawer(GravityCompat.START);
         return true;
+    }
+
+    private void alert(String title, String message) {
+        SimpleMessageDialogFragment.buildSimpleMessageDialog(title, message)
+                .show(getFragmentManager(), TAG_DIALOG_SIMPLE_MESSAGE);
     }
 }
