@@ -2,6 +2,7 @@ package com.splitcriteria.timecard;
 
 import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -30,14 +31,17 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
         setResult(RESULT_CANCELED, null);
         Intent intent = getIntent();
         Bundle extras = intent.getExtras();
-        if (extras != null) {
-            mAppWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID,
-                                         AppWidgetManager.INVALID_APPWIDGET_ID);
-            // Set the initial result to canceled in case the user backs out
-            Intent resultIntent = new Intent();
-            resultIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
-            setResult(RESULT_CANCELED, resultIntent);
-        }
+
+        // This activity should only be started by the Android system which contains
+        // extras containing the app widget ID
+        assert extras != null;
+
+        mAppWidgetId = extras.getInt(AppWidgetManager.EXTRA_APPWIDGET_ID,
+                                     AppWidgetManager.INVALID_APPWIDGET_ID);
+        // Set the initial result to canceled in case the user backs out
+        Intent resultIntent = new Intent();
+        resultIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, mAppWidgetId);
+        setResult(RESULT_CANCELED, resultIntent);
 
         // Set up the spinner with project names
         ProjectData pd = new ProjectData(this, MainActivity.PROJECTS_DB_NAME);
@@ -64,34 +68,16 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
     @Override
     public void onClick(View view) {
         if (view.getId() == R.id.config) {
-            setupWidget();
+            // Make sure a project has been selected, if not then notify the user
+            if (mSelectedProject == null) {
+                Toast.makeText(this, R.string.widget_no_project_selected, Toast.LENGTH_LONG).show();
+                return;
+            }
+            // Set up the widget
+            ProjectWidgetProvider.setupWidget(this, mSelectedProject, mAppWidgetId);
+            // Set the result to OK and finish
             setResultAndFinish(RESULT_OK);
         }
-    }
-
-    private void setupWidget() {
-        if (mSelectedProject == null) {
-            Toast.makeText(this, R.string.widget_no_project_selected, Toast.LENGTH_LONG).show();
-            return;
-        }
-        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(this);
-
-        // Create a broadcast intent to clock in/out the widget
-        Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(this, mSelectedProject);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-        // Set up the widget
-        RemoteViews views = new RemoteViews(getApplicationContext().getPackageName(),
-                                            R.layout.project_clock_in_out_widget);
-        views.setOnClickPendingIntent(R.id.name, pendingIntent);
-        views.setTextViewText(R.id.name, mSelectedProject);
-        appWidgetManager.updateAppWidget(mAppWidgetId, views);
-
-        // Add the project name to the options
-        Bundle options = new Bundle();
-        options.putString(Intent.EXTRA_TEXT, mSelectedProject);
-        appWidgetManager.updateAppWidgetOptions(mAppWidgetId, options);
     }
 
     private void setResultAndFinish(int resultCode) {

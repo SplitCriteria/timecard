@@ -17,30 +17,37 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int id : appWidgetIds) {
 
-            // Get the project name
+            // Get the project name from the widget's options Bundle
             String projectName = appWidgetManager
                     .getAppWidgetOptions(id)
                     .getString(Intent.EXTRA_TEXT);
 
-            // Create a broadcast intent to clock in/out the widget
-            Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(context, projectName);
-            PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                    context, 0, intent, PendingIntent.FLAG_ONE_SHOT);
+            // If there is no project name, then do no proceed
+            assert projectName != null;
 
-            // Set up the widget view
-            RemoteViews views = new RemoteViews(context.getPackageName(),
-                                                R.layout.project_clock_in_out_widget);
-            views.setTextViewText(R.id.name, projectName);
-            views.setOnClickPendingIntent(R.id.name, pendingIntent);
-
-            // Update the widget
-            appWidgetManager.updateAppWidget(id, views);
+            // Set up the widget
+            setupWidget(context, projectName, id);
         }
     }
 
-    @Override
-    public void onAppWidgetOptionsChanged(Context context, AppWidgetManager appWidgetManager,
-                                          int appWidgetId, Bundle newOptions) {
-        super.onAppWidgetOptionsChanged(context, appWidgetManager, appWidgetId, newOptions);
+    static void setupWidget(Context context, String projectName, int id) {
+        AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
+
+        // Create a broadcast intent to clock in/out the widget
+        Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(context, projectName);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(
+                context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Set up the widget views
+        RemoteViews views = new RemoteViews(context.getPackageName(),
+                R.layout.project_clock_in_out_widget);
+        views.setOnClickPendingIntent(R.id.widget, pendingIntent);
+        views.setTextViewText(R.id.name, projectName);
+        appWidgetManager.updateAppWidget(id, views);
+
+        // Add the project name to an options Bundle
+        Bundle options = new Bundle();
+        options.putString(Intent.EXTRA_TEXT, projectName);
+        appWidgetManager.updateAppWidgetOptions(id, options);
     }
 }

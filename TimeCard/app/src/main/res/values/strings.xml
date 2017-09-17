@@ -28,9 +28,10 @@
     <string name="time_without_days">%1$d hr %2$d min %3$d sec</string>
     <string name="export">Export</string>
 
-    <string name="notification_title_clock_out">Timecard: %1$s</string>
+    <string name="notification_title_clock_out">%1$s</string>
     <string name="notification_text_clock_out">Click to clock out from %1$s</string>
 
+    <string name="menu_title">Time Card</string>
     <string name="menu_current_projects">Current Projects</string>
     <string name="menu_archived_projects">Archived Projects</string>
 

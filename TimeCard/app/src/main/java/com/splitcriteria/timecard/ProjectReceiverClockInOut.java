@@ -5,6 +5,7 @@ import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.support.v4.app.NotificationCompat;
 import android.widget.Toast;
 
@@ -16,9 +17,10 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
 
     static final int NOTIFICATION_CLOCK_OUT_ID = 1;
 
-    static final String ACTION_CLOCK_IN = "com.splitcriteria.action.CLOCK_IN";
-    static final String ACTION_CLOCK_OUT = "com.splitcriteria.action.CLOCK_OUT";
-    static final String ACTION_CLOCK_TOGGLE = "com.splitcriteria.action.CLOCK_TOGGLE";
+    private static final String ACTION_ROOT = "com.splitcriteria.timecard.action.";
+    static final String ACTION_CLOCK_IN = ACTION_ROOT + "CLOCK_IN";
+    static final String ACTION_CLOCK_OUT = ACTION_ROOT + "CLOCK_OUT";
+    static final String ACTION_CLOCK_TOGGLE = ACTION_ROOT + "CLOCK_TOGGLE";
 
     public static Intent getClockInIntent(Context context, String projectName) {
         return getClockActionIntent(context, projectName, ACTION_CLOCK_IN);
@@ -34,7 +36,10 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
 
     public static Intent getClockActionIntent(Context context, String projectName, String action) {
         Intent intent = new Intent(context, ProjectReceiverClockInOut.class);
-        intent.putExtra(Intent.EXTRA_TEXT, projectName);
+        // Set the data to the project name (instead of using an Extra) because we need the
+        // Intents to be distinct from one another. Extras are not considered during Intent
+        // equality comparison, but the data is.
+        intent.setData(projectName != null ? Uri.parse(projectName) : null);
         intent.setAction(action);
         return intent;
     }
@@ -42,7 +47,7 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent != null) {
-            String projectName = intent.getStringExtra(Intent.EXTRA_TEXT);
+            String projectName = intent.getData().toString();
             String action = intent.getAction();
             String userMessage = null;
             String clockInMessage = context.getString(R.string.broadcast_clock_in,
@@ -83,7 +88,7 @@ public class ProjectReceiverClockInOut extends BroadcastReceiver {
 
     private void postNotification(Context context, String projectName) {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
-                .setSmallIcon(R.drawable.ic_menu_send)
+                .setSmallIcon(R.drawable.ic_clock_out)
                 .setContentTitle(
                         context.getString(R.string.notification_title_clock_out, projectName))
                 .setContentText(
