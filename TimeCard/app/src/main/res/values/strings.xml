@@ -11,6 +11,9 @@
     <string name="title_create_project">Create Project</string>
     <string name="button_create">Create</string>
 
+    <string name="dialog_get_extra_data_title">Add Extra Data</string>
+    <string name="dialog_get_extra_data_positive_button">Add</string>
+
     <string name="error_title">Error</string>
     <string name="error_project_exists">A project already exists named \'%1$s\'.</string>
     <string name="error_create">Error creating project \'%1$s\'</string>
@@ -18,6 +21,7 @@
     <string name="project_created">Project Created</string>
     <string name="project_clocked_in">Clocked In</string>
     <string name="project_clocked_out">Clocked Out</string>
+    <string name="project_clocked_in_instant">Time Marked</string>
     <string name="project_archived">Project \'%1$s\' archived</string>
     <string name="project_unarchived">Project \'%1$s\' un-archived</string>
     <string name="project_deleted">Project \'%1$s\' deleted!</string>
@@ -26,27 +30,52 @@
 
     <string name="clock_in">Clock In</string>
     <string name="clock_out">Clock Out</string>
+    <string name="clock_in_instant">Mark Time</string>
 
     <string name="time_none">No time clocked yet!</string>
-    <string name="time_with_days">%1$d days %2$d hr %3$d min %4$d sec</string>
-    <string name="time_without_days">%1$d hr %2$d min %3$d sec</string>
+    <string name="time_days">%1$d days %2$d hr %3$d min %4$d sec</string>
+    <string name="time_hours">%1$d hr %2$d min %3$d sec</string>
+    <string name="time_minutes">%1$d min %2$d sec</string>
+    <string name="time_seconds">%1$d sec</string>
     <string name="export">Export</string>
 
     <string name="notification_title_clock_out">%1$s</string>
     <string name="notification_text_clock_out">Click to clock out from %1$s</string>
+    <string name="notification_text_mark_dismiss">Click to dismiss this notification</string>
+    <string name="notification_sticky_clock_in_instructions">Use action buttons to Clock In or Dismiss</string>
+    <string name="notification_sticky_clock_out_instructions">Use action buttons to Clock Out or Dismiss</string>
+    <string name="notification_sticky_mark_time_instructions">Use action buttons to Mark Time or Dismiss</string>
+    <string name="notification_sticky_marked_time_with_data">Marked time with extra data \'%1$s\' at %2$s</string>
+    <string name="notification_sticky_marked_time">Marked time at %1$s</string>
+    <string name="notification_sticky_clocked_in_with_data">Clocked in with extra data \'%1$s\' at %2$s</string>
+    <string name="notification_sticky_clocked_in">Clocked in at %1$s</string>
+    <string name="notification_sticky_clocked_out">Clocked out (%1$s) at %2$s</string>
+    <string name="notification_extra_data">Extra Data</string>
+    <string name="notification_extra_data_instruction">Enter extra data</string>
+    <string name="notification_action_dismiss">Dismiss</string>
 
     <string name="menu_title">Time Card</string>
     <string name="menu_current_projects">Current Projects</string>
     <string name="menu_archived_projects">Archived Projects</string>
+    <string name="menu_mark_notification">Mark Notification</string>
 
     <string name="exported_error">Failed to export \'%1$s\'</string>
     <string name="exported_success">Exported \'%1$s\'</string>
 
     <string name="broadcast_clock_out">%1$s: \'%2$s\' clocked out</string>
     <string name="broadcast_clock_in">%1$s: \'%2$s\' clocked in</string>
+    <string name="broadcast_clock_in_instant">%1$s: \'%2$s\' time marked</string>
     <string name="broadcast_error">%1$s: broadcast error</string>
 
     <string name="widget_config_instructions">Select a project to create a widget. Once created, click the widget to clock in/out.</string>
     <string name="widget_finish_config">Create Widget</string>
     <string name="widget_no_project_selected">You must select a project</string>
+
+    <string name="setting_use_location_title">Attach Location</string>
+    <string name="setting_use_location_description">When enabled, location data is added for the duration of when this project is clocked in</string>
+    <string name="setting_no_duration_title">Instant</string>
+    <string name="setting_no_duration_description">When enabled, project time-frames are instantaneous (start and end time are the same)</string>
+    <string name="setting_use_extra_data_title">Extra Data</string>
+    <string name="setting_use_extra_data_description">When enabled, extra data is added to each project time-frame</string>
+    <string name="setting_default_extra_label">Default Extra Data:</string>
 </resources>

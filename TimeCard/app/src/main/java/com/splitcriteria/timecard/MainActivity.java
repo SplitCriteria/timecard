@@ -5,6 +5,7 @@ import android.app.DialogFragment;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
 import android.support.v4.view.GestureDetectorCompat;
@@ -27,7 +28,6 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.TextView;
-import android.widget.Toast;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
@@ -38,7 +38,6 @@ public class MainActivity extends AppCompatActivity
 
     private RecyclerView mRecyclerView;
     private ProjectAdapter mAdapter;
-    private RecyclerView.LayoutManager mLayoutManager;
     private ProjectData mProjectData;
     private GestureDetectorCompat mGestures;
     private boolean mShowingArchived = false;
@@ -73,7 +72,12 @@ public class MainActivity extends AppCompatActivity
             String message = arguments.getString(MESSAGE);
             builder.setTitle(title)
                     .setMessage(message)
-                    .setPositiveButton(android.R.string.ok, null)
+                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dismiss();
+                        }
+                    })
                     .setNegativeButton(android.R.string.cancel, null);
             return builder.create();
         }
@@ -90,8 +94,8 @@ public class MainActivity extends AppCompatActivity
         public Dialog onCreateDialog(Bundle savedInstanceState) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
             View view = LayoutInflater.from(getActivity())
-                    .inflate(R.layout.dialog_create_project, null);
-            final EditText editText = view.findViewById(R.id.name);
+                    .inflate(R.layout.dialog_user_input, null);
+            final EditText editText = view.findViewById(R.id.text);
             builder.setView(view)
                    .setTitle(R.string.title_create_project)
                    .setPositiveButton(R.string.button_create,
@@ -112,6 +116,8 @@ public class MainActivity extends AppCompatActivity
                                        Snackbar.make(
                                                activity.mRecyclerView, R.string.project_created,
                                                Snackbar.LENGTH_SHORT).show();
+                                       // Open the project activity for the newly created project
+                                       activity.openProjectActivity(name);
                                    } else {
                                        activity.alert(activity.getString(R.string.error_title),
                                                activity.getString(R.string.error_create, name));
@@ -156,8 +162,8 @@ public class MainActivity extends AppCompatActivity
         mRecyclerView = (RecyclerView) findViewById(R.id.projects);
         // Improves performance for fixed-size RecyclerView's
         mRecyclerView.setHasFixedSize(true);
-        mLayoutManager = new LinearLayoutManager(this);
-        mRecyclerView.setLayoutManager(mLayoutManager);
+        RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
+        mRecyclerView.setLayoutManager(layoutManager);
         // Get the project data
         mProjectData = new ProjectData(getApplicationContext(), PROJECTS_DB_NAME);
 
@@ -169,10 +175,7 @@ public class MainActivity extends AppCompatActivity
                 if (clicked != null) {
                     TextView tv = clicked.findViewById(R.id.name);
                     String projectName = tv.getText().toString();
-                    Intent projectIntent = new Intent(getApplicationContext(),
-                                                      ProjectActivity.class);
-                    projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
-                    startActivity(projectIntent);
+                    openProjectActivity(projectName);
                     return true;
                 } else {
                     return false;
@@ -355,7 +358,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     @Override
-    public boolean onNavigationItemSelected(MenuItem item) {
+    public boolean onNavigationItemSelected(@NonNull MenuItem item) {
         // Handle navigation view item clicks here.
         int id = item.getItemId();
 
@@ -377,5 +380,13 @@ public class MainActivity extends AppCompatActivity
     private void alert(String title, String message) {
         SimpleMessageDialogFragment.buildSimpleMessageDialog(title, message)
                 .show(getFragmentManager(), TAG_DIALOG_SIMPLE_MESSAGE);
+    }
+
+    private void openProjectActivity(String projectName) {
+        if (!TextUtils.isEmpty(projectName)) {
+            Intent projectIntent = new Intent(getApplicationContext(), ProjectActivity.class);
+            projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
+            startActivity(projectIntent);
+        }
     }
 }

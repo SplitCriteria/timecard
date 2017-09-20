@@ -5,13 +5,17 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.support.annotation.NonNull;
+import android.text.TextUtils;
 import android.util.ArrayMap;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.UnsupportedEncodingException;
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -33,12 +37,25 @@ public class ProjectData {
     private static final String KEY_PROJECT_NAME = "name";
     private static final String KEY_ARCHIVED = "archived";
     private static final String KEY_TRACK_LOCATION = "track_location";
+    private static final String KEY_NO_DURATION = "no_duration";
+    private static final String KEY_USES_EXTRA_DATA = "use_extra";
+    private static final String KEY_DEFAULT_EXTRA_DATA = "default_extra";
     private static final String KEY_CURRENT_TIMECARD = "current_timecard_row";
     // Project timecard table column names
     private static final String KEY_START_TIME = "start";
     private static final String KEY_END_TIME = "end";
+    private static final String KEY_EXTRA_DATA = "extra";
 
-    public class ProjectDataOpenHelper extends SQLiteOpenHelper {
+    class Metadata {
+        boolean archived;
+        boolean trackLocation;
+        boolean noDuration;
+        boolean usesExtraData;
+        String defaultExtraData;
+        int currentTimecard;
+    }
+
+    class ProjectDataOpenHelper extends SQLiteOpenHelper {
 
         public ProjectDataOpenHelper(Context context, String dbName) {
             super(context, dbName, null, DATABASE_VERSION);
@@ -50,6 +67,9 @@ public class ProjectData {
                                    KEY_PROJECT_NAME + " TEXT," +
                                    KEY_ARCHIVED + " INTEGER DEFAULT 0," +
                                    KEY_TRACK_LOCATION + " INTEGER DEFAULT 0," +
+                                   KEY_NO_DURATION + " INTEGER DEFAULT 0," +
+                                   KEY_USES_EXTRA_DATA + " INTEGER DEFAULT 0," +
+                                   KEY_DEFAULT_EXTRA_DATA + " TEXT DEFAULT NULL," +
                                    KEY_CURRENT_TIMECARD + " INTEGER DEFAULT -1);");
         }
 
@@ -60,31 +80,43 @@ public class ProjectData {
         }
     }
 
-    public ProjectData(Context context, String dbName) {
+    ProjectData(Context context, String dbName) {
         mDBHelper = new ProjectDataOpenHelper(context, dbName);
         mDatabase = mDBHelper.getWritableDatabase();
     }
 
-    public Map<String, Map<String, Object>> getProjectData() {
-        Map<String, Map<String, Object>> results = new ArrayMap<>();
+    private Map<String, Metadata> getMetadata() {
+        Map<String, Metadata> results = new ArrayMap<>();
         Cursor cursor = mDatabase.rawQuery("SELECT * FROM " + PROJECTS_TABLE + ";", null);
         int nameIndex = cursor.getColumnIndex(KEY_PROJECT_NAME);
         int archivedIndex = cursor.getColumnIndex(KEY_ARCHIVED);
         int trackLocationIndex = cursor.getColumnIndex(KEY_TRACK_LOCATION);
         int currentTimecardIndex = cursor.getColumnIndex(KEY_CURRENT_TIMECARD);
+        int usesExtraDataIndex = cursor.getColumnIndex(KEY_USES_EXTRA_DATA);
+        int defaultExtraDataIndex = cursor.getColumnIndex(KEY_DEFAULT_EXTRA_DATA);
+        int noDurationIndex = cursor.getColumnIndex(KEY_NO_DURATION);
         while (cursor.moveToNext()) {
-            Map<String, Object> row = new HashMap<>();
-            row.put(KEY_ARCHIVED, cursor.getInt(archivedIndex) != 0);
-            row.put(KEY_TRACK_LOCATION, cursor.getInt(trackLocationIndex) != 0);
-            row.put(KEY_CURRENT_TIMECARD, cursor.getInt(currentTimecardIndex));
-            results.put(cursor.getString(nameIndex), row);
+            Metadata metadata = new Metadata();
+            metadata.archived = cursor.getInt(archivedIndex) != 0;
+            metadata.trackLocation = cursor.getInt(trackLocationIndex) != 0;
+            metadata.currentTimecard = cursor.getInt(currentTimecardIndex);
+            metadata.usesExtraData = cursor.getInt(usesExtraDataIndex) != 0;
+            metadata.defaultExtraData = cursor.getString(defaultExtraDataIndex);
+            metadata.noDuration = cursor.getInt(noDurationIndex) != 0;
+            results.put(cursor.getString(nameIndex), metadata);
         }
         cursor.close();
         return results;
     }
 
+    Metadata getProjectMetadata(String projectName) {
+        return projectName != null ? getMetadata().get(projectName) : null;
+    }
+
     /**
-     * @param archived
+     * Gets a list of project names (either archived or not archived)
+     *
+     * @param archived  flag to return archived or not archived projects
      * @return a list of projects names which are not archived
      */
     String[] getProjectNames(boolean archived) {
@@ -117,7 +149,84 @@ public class ProjectData {
         return names.contains(project);
     }
 
-    public boolean addProject(String project) {
+    /**
+     * Sets the value of a project's metadata to a specific value
+     *
+     * @param projectName the project name
+     * @param column_key the name of the column
+     * @param value the value, either: Integer, Long, Boolean (stored as 1 or 0), or String
+     * @return  true, if the update was successful
+     */
+    private boolean setMetadataValue(String projectName, String column_key, @NonNull Object value) {
+        Metadata metadata = getProjectMetadata(projectName);
+        if (metadata != null) {
+            ContentValues cv = new ContentValues();
+            if (value instanceof Integer) {
+                cv.put(column_key, (Integer)value);
+            } else if (value instanceof Long) {
+                cv.put(column_key, (Long)value);
+            } else if (value instanceof Boolean) {
+                // Boolean values are stored as integers in the SQLite database
+                cv.put(column_key, (Boolean)value ? 1 : 0);
+            } else if (value instanceof String) {
+                cv.put(column_key, (String)value);
+            }
+            // Update the database
+            int updated = mDatabase.update(
+                    PROJECTS_TABLE, cv,
+                    KEY_PROJECT_NAME + "=?",
+                    new String[]{projectName});
+            if (updated == 0) {
+                throw new RuntimeException("Unable to update metadata for '" + projectName + "'");
+            }
+            return true;
+        } else {
+            // Project doesn't exist
+            return false;
+        }
+    }
+
+    /**
+     * Updates metadata for a project. Note: this function will not update the currentTimecard
+     * as this is strictly controlled with clockIn() and clockOut()
+     *
+     * @param project   project name
+     * @param newMetadata   an updated metadata object
+     * @return  true, if the update was successful
+     */
+    boolean updateMetadata(String project, @NonNull Metadata newMetadata) {
+        Metadata prevMetadata = getProjectMetadata(project);
+        if (prevMetadata != null) {
+            // Change the metadata properties which are different
+            if (prevMetadata.noDuration != newMetadata.noDuration) {
+                setMetadataValue(project, KEY_NO_DURATION, newMetadata.noDuration);
+            }
+            if (prevMetadata.usesExtraData != newMetadata.usesExtraData) {
+                setMetadataValue(project, KEY_USES_EXTRA_DATA, newMetadata.usesExtraData);
+            }
+            if (prevMetadata.defaultExtraData == null ||
+                    newMetadata.defaultExtraData == null ||
+                    !prevMetadata.defaultExtraData.equals(newMetadata.defaultExtraData)) {
+                // Catch any null default extra data and set it to an empty string
+                if (newMetadata.defaultExtraData == null) {
+                    newMetadata.defaultExtraData = "";
+                }
+                setMetadataValue(project, KEY_DEFAULT_EXTRA_DATA, newMetadata.defaultExtraData);
+            }
+            if (prevMetadata.archived != newMetadata.archived) {
+                setMetadataValue(project, KEY_ARCHIVED, newMetadata.archived);
+            }
+            if (prevMetadata.trackLocation != newMetadata.trackLocation) {
+                setMetadataValue(project, KEY_TRACK_LOCATION, newMetadata.trackLocation);
+            }
+            return true;
+        } else {
+            // Project doesn't exist
+            return false;
+        }
+    }
+
+    boolean addProject(String project) {
         if (exists(project)) {
             return false;
         }
@@ -130,25 +239,37 @@ public class ProjectData {
             mDatabase.execSQL("DROP TABLE IF EXISTS '" + project + "';");
             mDatabase.execSQL("CREATE TABLE '" + project + "' (" +
                               KEY_START_TIME + " TEXT," +
-                              KEY_END_TIME + " TEXT DEFAULT NULL);");
+                              KEY_END_TIME + " TEXT DEFAULT NULL," +
+                              KEY_EXTRA_DATA + " TEXT DEFAULT '');");
         }
         return rowid != -1;
     }
 
     /**
-     * Archives or un-archives a project
+     * Renames a project
+     *
+     * @param oldProjectName    the current project name
+     * @param newProjectName    the new project name
+     * @return  true, if the rename was successful
+     */
+    boolean renameProject(String oldProjectName, String newProjectName) {
+        return exists(oldProjectName) &&
+                setMetadataValue(oldProjectName, KEY_PROJECT_NAME, newProjectName);
+    }
+
+    /**
+     * Archives or un-archives a project. Convenience method for updateMetadata() with
+     * the archive flag set.
      *
      * @param project   the project name
      * @param archive   true to archive, false to un-archive
-     * @return
+     * @return  true if setting the archive flag was successful
      */
-    public boolean setArchived(String project, boolean archive) {
-        if (exists(project)) {
-            ContentValues cv = new ContentValues();
-            cv.put(KEY_ARCHIVED, archive ? 1 : 0);
-            long updated = mDatabase.update(PROJECTS_TABLE, cv, KEY_PROJECT_NAME + "=?",
-                                            new String[] {project});
-            return updated > 0;
+    boolean setArchived(String project, boolean archive) {
+        Metadata metadata = getProjectMetadata(project);
+        if (metadata != null) {
+            metadata.archived = archive;
+            return updateMetadata(project, metadata);
         } else {
             return false;
         }
@@ -157,10 +278,11 @@ public class ProjectData {
     /**
      * Deletes a project
      *
-     * @param project
-     * @return
+     * @param project project name
+     *
+     * @return  true if the project was deleted
      */
-    public boolean deleteProject(String project) {
+    boolean deleteProject(String project) {
         if (exists(project)) {
             // Delete the project timecard table
             mDatabase.execSQL("DROP TABLE '" + project + "';");
@@ -177,23 +299,23 @@ public class ProjectData {
         }
     }
 
-    public boolean isClockedIn(String project) {
+    /**
+     * Returns true if the project is clocked in (i.e. waiting to be clocked out)
+     *
+     * @param project   project name
+     * @return true, if clocked in
+     */
+    boolean isClockedIn(String project) {
         // Get the project data
-        Map<String, Map<String, Object>> projectData = getProjectData();
-        // If the project exists, then determine if it's checked in
-        if (projectData.containsKey(project)) {
-            Map<String, Object> data = projectData.get(project);
-            // Checked in is TRUE if a row ID is not equal to -1 (invalid)
-            return (Integer)data.get(KEY_CURRENT_TIMECARD) != -1;
-        } else {
-            return false;
-        }
+        Metadata metadata = getProjectMetadata(project);
+        // Checked in is TRUE if a row ID is not equal to -1 (invalid)
+        return metadata != null && metadata.currentTimecard != -1;
     }
 
     /**
      * Helper function which returns the current date time in an SQLite friendly format
      *
-     * @return
+     * @return  a String representing the current timestamp (year, month, date, and time)
      */
     private String getDateTime() {
         SimpleDateFormat dateFormat = new SimpleDateFormat(
@@ -203,32 +325,65 @@ public class ProjectData {
     }
 
     /**
-     * A project can only be clocked in once. A project must be clocked out before
-     * another clock in is allowed.
+     * Helper function which returns a Date in the default locale based on a String
+     * returned from getDateTime()
      *
-     * @param project
-     * @return
+     * @param datetime  a time String from getDateTime() -- format: "yyyy-MM-dd HH:mm:ss"
+     * @return  a Date object, or null if there was a ParseException
      */
-    public boolean clockIn(String project) {
+    private Date getDate(String datetime) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat(
+                "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        try {
+            return dateFormat.parse(datetime);
+        } catch (ParseException exception) {
+            return null;
+        }
+    }
+
+    /**
+     * A project can only be clocked in once. A project must be clocked out before
+     * another clock in is allowed. Projects which are set to "no duration" do not
+     * clock in. Instead, a new row of data is inserted using the same start and
+     * end time.
+     *
+     * If the project has "use extra data" flag set, then the specified extra data
+     * is used. Or, if null is passed, then the default (if any) is used.
+     *
+     * @param project project name
+     * @param extra specific extra data to use, or null to use the default extra data
+     *
+     * @return  true, if the project was clocked in
+     */
+    boolean clockIn(String project, String extra) {
         // Get the project data
-        Map<String, Map<String, Object>> projectData = getProjectData();
-        if (projectData.containsKey(project)) {
-            Map<String, Object> data = projectData.get(project);
+        Metadata metadata = getProjectMetadata(project);
+        if (metadata != null) {
             // Make sure the project isn't already clocked in
-            if ((Integer)data.get(KEY_CURRENT_TIMECARD) == -1) {
-                // Add a new row (which has a default start timestamp) to the timecard
+            if (metadata.currentTimecard == -1) {
+                // Add a new row to the timecard
                 ContentValues cv = new ContentValues();
-                cv.put(KEY_START_TIME, getDateTime());
+                // Get the current timestamp
+                String dateTime = getDateTime();
+                cv.put(KEY_START_TIME, dateTime);
+                // If this project is labeled as "no duration" then set the end time too
+                if (metadata.noDuration) {
+                    cv.put(KEY_END_TIME, dateTime);
+                }
+                // If the project is uses extra data, then insert it
+                if (metadata.usesExtraData || extra != null) {
+                    if (extra != null) {
+                        cv.put(KEY_EXTRA_DATA, extra);
+                    } else if (metadata.defaultExtraData != null) {
+                        cv.put(KEY_EXTRA_DATA, metadata.defaultExtraData);
+                    }
+                }
+                // Insert the new data
                 long row_id = mDatabase.insert("'"+project+"'", null, cv);
-                // Add the row_id to the project metadata
-                cv = new ContentValues();
-                cv.put(KEY_CURRENT_TIMECARD, (int)row_id);
-                int updated = mDatabase.update(
-                        PROJECTS_TABLE, cv,
-                        KEY_PROJECT_NAME + "=?",
-                        new String[] {project});
-                if (updated == 0) {
-                    throw new RuntimeException("Unable to update metadata for '" + project + "'");
+                // If "no duration" flag is not set (default), then save the row id of the
+                // incomplete row, to signify that the project is "clocked in"
+                if (!metadata.noDuration) {
+                    setMetadataValue(project, KEY_CURRENT_TIMECARD, row_id);
                 }
                 return true;
             } else {
@@ -241,51 +396,77 @@ public class ProjectData {
         }
     }
 
-    public boolean clockOut(String project) {
+    /**
+     * Clock a project out and return the duration of the event
+     *
+     * @param project   the project name
+     * @return  the time of the most recent duration, or -1 if clock out failed
+     *          (e.g. the project isn't clocked in, or doesn't exist)
+     */
+    int clockOut(String project) {
         // Get the project data
-        Map<String, Map<String, Object>> projectData = getProjectData();
-        if (projectData.containsKey(project)) {
-            Map<String, Object> data = projectData.get(project);
+        Metadata metadata = getProjectMetadata(project);
+        if (metadata != null) {
             // Make sure the project is clocked in
-            int row_id = (Integer)data.get(KEY_CURRENT_TIMECARD);
-            if (row_id != -1) {
+            if (metadata.currentTimecard != -1) {
                 // Add the stop time to the timecard
                 ContentValues cv = new ContentValues();
                 cv.put(KEY_END_TIME, getDateTime());
+                int rowID = metadata.currentTimecard;
                 int updated = mDatabase.update(
                         "'"+project+"'", cv, "ROWID=?",
-                        new String[] {Integer.toString(row_id)});
+                        new String[] {Integer.toString(rowID)});
                 // If unable to update the row, then there was an error clocking out
                 if (updated == 0) {
                     throw new RuntimeException("Unable to clock out of '" + project + "'");
                 }
                 // Update the metadata to show that we're clocked out
-                cv = new ContentValues();
-                cv.put(KEY_CURRENT_TIMECARD, -1);
-                updated = mDatabase.update(
-                        PROJECTS_TABLE, cv,
-                        KEY_PROJECT_NAME + "=?",
-                        new String[] {project});
-                if (updated == 0) {
-                    throw new RuntimeException("Unable to updated metadata for '" + project + "'");
+                setMetadataValue(project, KEY_CURRENT_TIMECARD, -1);
+                // Get the time of the most recent event
+                int timeInSeconds = 0;
+                // Get the elapsed time of all the timecard entries
+                Cursor cursor = mDatabase.rawQuery(
+                        "SELECT strftime('%s'," + KEY_END_TIME + ") - " +
+                               "strftime('%s'," + KEY_START_TIME + ") AS 'time' " +
+                        "FROM '" + project + "'" +
+                        "WHERE ROWID=?;",
+                        new String[] {Integer.toString(rowID)});
+                int timeIndex = cursor.getColumnIndex("time");
+                while (cursor.moveToNext()) {
+                    timeInSeconds += cursor.getInt(timeIndex);
                 }
-                return true;
+                return timeInSeconds;
             } else {
                 // Project is not clocked in -- must be clocked in first
-                return false;
+                return -1;
             }
         } else {
             // Project does not exist
-            return false;
+            return -1;
         }
     }
 
+    boolean toggleClockInOut(String project, String extraData) {
+        // Attempt to clock the project in -- it's either already clocked in
+        // and will return false, or doesn't exist and will return false
+        if (!clockIn(project, extraData)) {
+            // Attempt to clock the project out. We know it's already clocked
+            // in or doesn't exist. Return the result of clocking out which is
+            // either success clocking out, or false if an error (i.e. the project
+            // doesn't exist or there was a problem with the database).
+            return clockOut(project) != -1;
+        }
+        // The project was able to be clocked in -- return success
+        return true;
+    }
+
     /**
+     * Returns the amount of time the project has been clocked in over its lifetime
      *
-     * @param project
+     * @param project the project name
      * @return -1 if the project doesn't exist, >= 0 in seconds
      */
-    public int getProjectTime(String project) {
+    int getProjectTime(String project) {
         if (exists(project)) {
             int timeInSeconds = 0;
             // Get the elapsed time of all the timecard entries
@@ -317,24 +498,40 @@ public class ProjectData {
         }
     }
 
-    public void close() {
+    void close() {
         mDBHelper.close();
     }
 
-    public boolean dumpToCSV(String project, OutputStream os) {
+    boolean dumpToCSV(String project, OutputStream os) {
         if (exists(project)) {
             Cursor cursor = mDatabase.rawQuery("SELECT * FROM '" + project + "';", null);
             try {
-                os.write((KEY_START_TIME + "," + KEY_END_TIME + "\n").getBytes("utf-8"));
+                os.write((KEY_START_TIME + "," + KEY_END_TIME + "," +
+                         "Delta (seconds)" + "," + KEY_EXTRA_DATA + "\n")
+                        .getBytes("utf-8"));
                 int startIndex = cursor.getColumnIndex(KEY_START_TIME);
                 int endIndex = cursor.getColumnIndex(KEY_END_TIME);
+                int extraIndex = cursor.getColumnIndex(KEY_EXTRA_DATA);
                 while (cursor.moveToNext()) {
-                    String output = cursor.getString(startIndex) + "," +
-                                    cursor.getString(endIndex) + "\n";
+                    String start = cursor.getString(startIndex);
+                    String end = cursor.getString(endIndex);
+                    String timeInSeconds = "";
+                    if (!TextUtils.isEmpty(start) && !TextUtils.isEmpty(end)) {
+                        Calendar calendar = Calendar.getInstance(Locale.getDefault());
+                        calendar.setTime(getDate(start));
+                        long startMillis = calendar.getTimeInMillis();
+                        calendar.setTime(getDate(end));
+                        long endMillis = calendar.getTimeInMillis();
+                        timeInSeconds = Long.toString((endMillis - startMillis)/1000);
+                    }
+                    String output = start + "," + end + "," + timeInSeconds + "," +
+                                    cursor.getString(extraIndex) + "\n";
                     os.write(output.getBytes("utf-8"));
                 }
             } catch (IOException exception) {
                 return false;
+            } finally {
+                cursor.close();
             }
             return true;
         } else {

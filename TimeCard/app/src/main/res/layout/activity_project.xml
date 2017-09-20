@@ -5,24 +5,79 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="@dimen/widget_padding"
     tools:context="com.splitcriteria.timecard.ProjectActivity">
 
     <TextView
         android:id="@+id/time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/widget_margin"
         android:textSize="@dimen/text_size_large"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintRight_toRightOf="parent"/>
 
+    <include
+        layout="@layout/toggle_setting"
+        android:id="@+id/no_duration"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/time"
+        tools:layout_editor_absoluteX="8dp" />
+
+    <include
+        layout="@layout/toggle_setting"
+        android:id="@+id/track_location"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/no_duration"
+        tools:layout_editor_absoluteX="8dp" />
+
+    <include
+        layout="@layout/toggle_setting"
+        android:id="@+id/use_extra_data"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/track_location"
+        tools:layout_editor_absoluteX="8dp" />
+
+    <EditText
+        android:id="@+id/default_extra_data"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:inputType="text"
+        android:textAlignment="textEnd"
+        android:maxLines="1"
+        android:scrollHorizontally="true"
+        android:selectAllOnFocus="true"
+        app:layout_constraintLeft_toRightOf="@+id/default_extra_label"
+        app:layout_constraintTop_toBottomOf="@+id/use_extra_data"
+        app:layout_constraintRight_toRightOf="parent"/>
+
+    <TextView
+        android:id="@+id/default_extra_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/setting_default_extra_label"
+        android:labelFor="@+id/default_extra_data"
+        app:layout_constraintBaseline_toBaselineOf="@+id/default_extra_data"
+        app:layout_constraintRight_toLeftOf="@+id/default_extra_data"
+        app:layout_constraintLeft_toLeftOf="parent"/>
+
     <Button
         android:id="@+id/clock_in_out"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/widget_margin"
         android:textSize="@dimen/text_size_large"
-        app:layout_constraintBottom_toBottomOf="parent"/>
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        tools:layout_editor_absoluteX="8dp" />
 
 </android.support.constraint.ConstraintLayout>

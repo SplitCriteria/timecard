@@ -7,4 +7,11 @@
         android:title="@string/export"
         android:icon="@drawable/ic_export"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/mark_notification"
+        android:title="@string/menu_mark_notification"
+        android:icon="@drawable/ic_mark_notification"
+        app:showAsAction="ifRoom" />
+
 </menu>

@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.widget.RemoteViews;
 
 /**
@@ -22,8 +23,9 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
                     .getAppWidgetOptions(id)
                     .getString(Intent.EXTRA_TEXT);
 
-            // If there is no project name, then do no proceed
-            assert projectName != null;
+            if (TextUtils.isEmpty(projectName)) {
+                return;
+            }
 
             // Set up the widget
             setupWidget(context, projectName, id);
@@ -33,10 +35,17 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
     static void setupWidget(Context context, String projectName, int id) {
         AppWidgetManager appWidgetManager = AppWidgetManager.getInstance(context);
 
+        // Get any default extra data
+        ProjectData projectData = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+        ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
+        projectData.close();
+        String extraData = metadata.usesExtraData ? metadata.defaultExtraData : null;
+
         // Create a broadcast intent to clock in/out the widget
-        Intent intent = ProjectReceiverClockInOut.getClockToggleIntent(context, projectName);
-        PendingIntent pendingIntent = PendingIntent.getBroadcast(
-                context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        PendingIntent pendingIntent = new ProjectReceiver.IntentBuilder(context, projectName)
+                .setAction(ProjectReceiver.ACTION_CLOCK_TOGGLE)
+                .setExtraData(extraData)
+                .buildPendingIntent();
 
         // Set up the widget views
         RemoteViews views = new RemoteViews(context.getPackageName(),

@@ -9,8 +9,12 @@ Examples:
 * Record your time spent working out by clocking in and out at the start and end or your workouts
 
 ## Planned Updates
-- [ ] Inform using trying to create a project which already exists
-- [ ] Create Shortcut to replace the clock in/out widget
-- [ ] Create single use data tracking (i.e. start time and end time are the same)
-- [ ] Add additional data to be associated with time data (e.g. billing rate, weight)
+- [x] Inform using trying to create a project which already exists
+- [x] Create single use data tracking (i.e. start time and end time are the same)
+- [x] Add additional data to be associated with time data (e.g. billing rate, weight)
+- [x] Add project settings in ProjectActivity
+- [x] Add extra data to be added via a "Clock Out" notification
 - [ ] Add location tracking
+- [ ] Create Shortcut to replace the clock in/out widget
+- [ ] Add ability to rename projects
+- [ ] Add ability to import backed-up project data

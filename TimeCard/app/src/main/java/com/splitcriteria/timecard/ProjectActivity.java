@@ -1,18 +1,29 @@
 package com.splitcriteria.timecard;
 
 import android.app.Activity;
+import android.app.Dialog;
+import android.app.DialogFragment;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
+import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.CompoundButton;
+import android.widget.EditText;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import java.io.BufferedOutputStream;
@@ -26,7 +37,6 @@ public class ProjectActivity extends AppCompatActivity implements
     private ProjectData mProjectData;
     private TextView mProjectTime;
     private Button mClockInOutButton;
-    private boolean mIsClockedIn;
     private Handler mTimeUpdater;
 
     // Constants for second per X
@@ -36,19 +46,69 @@ public class ProjectActivity extends AppCompatActivity implements
 
     private static final long TIME_UPDATE_DELAY = 1000; // 1 second
 
-    private static final int NOTIFICATION_CLOCK_OUT_ID = 1;
-
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 1;
+
+    private static final String TAG_DIALOG_GET_EXTRA_DATA = "get_extra_data";
 
     private Runnable mUpdateTimeRunnable = new Runnable() {
         @Override
         public void run() {
             refreshProjectTime();
-            if (mIsClockedIn) {
+            if (mProjectData.isClockedIn(mProjectName)) {
                 mTimeUpdater.postDelayed(this, TIME_UPDATE_DELAY);
             }
         }
     };
+
+    /**
+     * Dialog Fragment designed to collect extra data from the user
+     */
+    public static class GetExtraDataDialogFragment extends DialogFragment {
+
+        private static final String KEY_PROJECT_NAME = "project";
+
+        public GetExtraDataDialogFragment() {}
+
+        public static GetExtraDataDialogFragment createGetExtraDataDialog(String projectName) {
+            GetExtraDataDialogFragment dialogFragment = new GetExtraDataDialogFragment();
+            Bundle args = new Bundle();
+            args.putString(KEY_PROJECT_NAME, projectName);
+            dialogFragment.setArguments(args);
+            return dialogFragment;
+        }
+
+        @Override
+        public Dialog onCreateDialog(Bundle savedInstanceState) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+            View view = LayoutInflater.from(getActivity())
+                    .inflate(R.layout.dialog_user_input, null);
+            final EditText editText = view.findViewById(R.id.text);
+            final String projectName = getArguments().getString(KEY_PROJECT_NAME);
+            builder.setView(view)
+                    .setTitle(R.string.dialog_get_extra_data_title)
+                    .setPositiveButton(R.string.dialog_get_extra_data_positive_button,
+                            new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialogInterface, int i) {
+                                    ProjectActivity activity = (ProjectActivity)getActivity();
+                                    // Get the extra data from the user
+                                    String extraData = editText.getText() == null ? null :
+                                                       editText.getText().toString();
+                                    // Send the broadcast to clock in with the extra data
+                                    activity.sendBroadcast(
+                                            new ProjectReceiver.IntentBuilder(activity, projectName)
+                                                .setAction(ProjectReceiver.ACTION_CLOCK_IN)
+                                                .setExtraData(extraData)
+                                                .setSuppressToast(true)
+                                                .build());
+                                    // Handle the post clock/in out actions
+                                    activity.doPostClockInActions();
+                                }
+                            })
+                    .setNegativeButton(android.R.string.cancel, null);
+            return builder.create();
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,10 +125,22 @@ public class ProjectActivity extends AppCompatActivity implements
         mProjectTime = (TextView)findViewById(R.id.time);
         // Get a reference to the project data
         mProjectData = new ProjectData(this, MainActivity.PROJECTS_DB_NAME);
-        // Set the "clocked in" flag
-        mIsClockedIn = mProjectData.isClockedIn(mProjectName);
+        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        // Set up the project's settings
+        setupToggle(R.id.no_duration, getString(R.string.setting_no_duration_title),
+                    getString(R.string.setting_no_duration_description), metadata.noDuration);
+        setupToggle(R.id.use_extra_data, getString(R.string.setting_use_extra_data_title),
+                getString(R.string.setting_use_extra_data_description), metadata.usesExtraData);
+        setupToggle(R.id.track_location, getString(R.string.setting_use_location_title),
+                getString(R.string.setting_use_location_description), metadata.trackLocation);
+        setupExtraData();
         // Set the text for the clock in/out button.
-        refreshClockInOutButton();
+        if (mProjectData.isClockedIn(mProjectName)) {
+            mClockInOutButton.setText(R.string.clock_out);
+        } else {
+            mClockInOutButton.setText(metadata.noDuration ?
+                    R.string.clock_in_instant : R.string.clock_in);
+        }
         // Set the project time
         refreshProjectTime();
         // Set up the time updater
@@ -78,26 +150,41 @@ public class ProjectActivity extends AppCompatActivity implements
 
     @Override
     public void onClick(View view) {
-        if (view.getId() == R.id.clock_in_out) {
-            if (mIsClockedIn) {
+        int clickedID = view.getId();
+        if (clickedID == R.id.clock_in_out) {
+            if (mProjectData.isClockedIn(mProjectName)) {
                 mProjectData.clockOut(mProjectName);
                 Snackbar.make(view, R.string.project_clocked_out, Snackbar.LENGTH_SHORT).show();
                 // Remove the time updater
                 mTimeUpdater.removeCallbacks(mUpdateTimeRunnable);
                 // Remove any notification using our broadcast receiver
-                sendBroadcast(ProjectReceiverClockInOut.getClockOutIntent(this, mProjectName));
+                sendBroadcast(new ProjectReceiver.IntentBuilder(this, mProjectName)
+                        .setAction(ProjectReceiver.ACTION_CLOCK_OUT)
+                        .setSuppressToast(true)
+                        .build());
+                // We're clocked out, so set the text to clock in
+                mClockInOutButton.setText(R.string.clock_in);
             } else {
-                mProjectData.clockIn(mProjectName);
-                Snackbar.make(view, R.string.project_clocked_in, Snackbar.LENGTH_SHORT).show();
-                // Add the time updater
-                mTimeUpdater.post(mUpdateTimeRunnable);
-                // Post a notification using our broadcast receiver
-                sendBroadcast(ProjectReceiverClockInOut.getClockInIntent(this, mProjectName));
+                // Get the project's metadata
+                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                // If the project uses extra data, then use the default or if not default, then
+                // show a dialog which allows the user to input the extra data
+                if (metadata.usesExtraData && TextUtils.isEmpty(metadata.defaultExtraData)) {
+                    GetExtraDataDialogFragment.createGetExtraDataDialog(mProjectName)
+                            .show(getFragmentManager(), TAG_DIALOG_GET_EXTRA_DATA);
+                } else {
+                    // Post a notification using our broadcast receiver
+                    sendBroadcast(new ProjectReceiver.IntentBuilder(this, mProjectName)
+                            .setAction(ProjectReceiver.ACTION_CLOCK_IN)
+                            .setExtraData(metadata.defaultExtraData)
+                            .setSuppressToast(true)
+                            .build());
+                    // Handle activity specific "clocked in" actions (e.g. showing a Snackbar to
+                    // the user and starting the timer. This is done from another function so it
+                    // can also be called from the GetExtraDataDialogFragment
+                    doPostClockInActions();
+                }
             }
-            // Invert the clocked in flag
-            mIsClockedIn = !mIsClockedIn;
-            // Refresh the clock in/out button text
-            refreshClockInOutButton();
         }
     }
 
@@ -124,6 +211,13 @@ public class ProjectActivity extends AppCompatActivity implements
                 // Start the activity to get the file
                 startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
                 return true;
+            case R.id.mark_notification:
+                // The user wants to pin a "sticky" notification to which allows
+                // the user to clock in/out or mark items
+                sendBroadcast(new ProjectReceiver.IntentBuilder(this, mProjectName)
+                        .setAction(ProjectReceiver.ACTION_POST_STICKY)
+                        .build());
+                return true;
             default:
                 return super.onOptionsItemSelected(item);
         }
@@ -131,13 +225,14 @@ public class ProjectActivity extends AppCompatActivity implements
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        // Handle the Export request from the user
         if (requestCode == REQUEST_CODE_CREATE_DOCUMENT && resultCode == Activity.RESULT_OK) {
             if (data != null) {
                 Uri uri = data.getData();
                 new AsyncTask<Uri, Void, Boolean>() {
                     @Override
                     protected Boolean doInBackground(Uri... uri) {
-                        boolean isError = false;
+                        boolean isError;
                         try {
                             OutputStream os = new BufferedOutputStream(
                                     getContentResolver().openOutputStream(uri[0], "w"));
@@ -177,11 +272,6 @@ public class ProjectActivity extends AppCompatActivity implements
         super.onDestroy();
     }
 
-    private void refreshClockInOutButton() {
-        // If the project is clocked in, then the text should say "Clock Out" and vice versa
-        mClockInOutButton.setText(mIsClockedIn ? R.string.clock_out : R.string.clock_in);
-    }
-
     private void refreshProjectTime() {
         int projectTime = mProjectData.getProjectTime(mProjectName);
         String timeText;
@@ -193,11 +283,92 @@ public class ProjectActivity extends AppCompatActivity implements
             timeText = getResources().getString(R.string.time_none);
         } else if (days > 0) {
             timeText = getResources().getString(
-                    R.string.time_with_days, days, hours, minutes, seconds);
+                    R.string.time_days, days, hours, minutes, seconds);
         } else {
             timeText = getResources().getString(
-                    R.string.time_without_days, hours, minutes, seconds);
+                    R.string.time_hours, hours, minutes, seconds);
         }
         mProjectTime.setText(timeText);
+    }
+
+    private void setupToggle(int toggleRootID, String title, String description, boolean checked) {
+        final View rootView = findViewById(toggleRootID);
+        ((TextView)rootView.findViewById(R.id.title)).setText(title);
+        ((TextView)rootView.findViewById(R.id.description)).setText(description);
+        final Switch toggle = rootView.findViewById(R.id.toggle);
+        toggle.setChecked(checked);
+        rootView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                toggle.performClick();
+            }
+        });
+        // Enable/disable the extra data
+        if (toggleRootID == R.id.use_extra_data) {
+            findViewById(R.id.default_extra_label).setEnabled(checked);
+            findViewById(R.id.default_extra_data).setEnabled(checked);
+        }
+        ((Switch)rootView.findViewById(R.id.toggle)).setOnCheckedChangeListener(
+                new CompoundButton.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(CompoundButton compoundButton, boolean state) {
+                int clickedID = rootView.getId();
+                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                if (clickedID == R.id.no_duration) {
+                    metadata.noDuration = state;
+                    if (mProjectData.isClockedIn(mProjectName)) {
+                        mClockInOutButton.setText(R.string.clock_out);
+                    } else {
+                        mClockInOutButton.setText(metadata.noDuration ?
+                                R.string.clock_in_instant : R.string.clock_in);
+                    }
+                } else if (clickedID == R.id.track_location) {
+                    metadata.trackLocation = state;
+                } else if (clickedID == R.id.use_extra_data) {
+                    metadata.usesExtraData = state;
+                    // Update the enabled state of the default extra data
+                    findViewById(R.id.default_extra_label).setEnabled(state);
+                    findViewById(R.id.default_extra_data).setEnabled(state);
+                }
+                mProjectData.updateMetadata(mProjectName, metadata);
+            }
+        });
+    }
+
+    private void setupExtraData() {
+        // Set the current default extra data
+        EditText input = (EditText)findViewById(R.id.default_extra_data);
+        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        input.setText(metadata.defaultExtraData);
+
+        // Add a TextWatcher to update the new default extra data
+        input.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) { }
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) { }
+            @Override
+            public void afterTextChanged(Editable editable) {
+                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                metadata.defaultExtraData = editable == null ? "" : editable.toString();
+                mProjectData.updateMetadata(mProjectName, metadata);
+            }
+        });
+    }
+
+    private void doPostClockInActions() {
+        // Show a message Snackbar message to the user. If the project is not clocked
+        // in, then that means the this project is "instant" -- same start/end times
+        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        Snackbar.make(mProjectTime, metadata.noDuration ?
+                        R.string.project_clocked_in_instant : R.string.project_clocked_in,
+                Snackbar.LENGTH_SHORT).show();
+        // Add the time updater if not an instant project, and set the button to "clock out"
+        if (!metadata.noDuration) {
+            mTimeUpdater.post(mUpdateTimeRunnable);
+            mClockInOutButton.setText(R.string.clock_out);
+        } else {
+            mClockInOutButton.setText(R.string.clock_in_instant);
+        }
     }
 }
