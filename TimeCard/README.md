@@ -14,7 +14,9 @@ Examples:
 - [x] Add additional data to be associated with time data (e.g. billing rate, weight)
 - [x] Add project settings in ProjectActivity
 - [x] Add extra data to be added via a "Clock Out" notification
+- [ ] Create a persistent backup (e.g. Service which automatically backs up database)
 - [ ] Add location tracking
 - [ ] Create Shortcut to replace the clock in/out widget
 - [ ] Add ability to rename projects
 - [ ] Add ability to import backed-up project data
+- [ ] Add ability to sort project list (e.g. most used, favorite, custom order)
