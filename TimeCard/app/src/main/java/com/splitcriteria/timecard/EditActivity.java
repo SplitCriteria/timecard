@@ -1,27 +1,14 @@
 package com.splitcriteria.timecard;
 
 import android.app.Activity;
-import android.app.DatePickerDialog;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.TimePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
-import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
-import android.text.format.DateFormat;
-import android.view.GestureDetector;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
-import android.widget.DatePicker;
-import android.widget.TextView;
-import android.widget.TimePicker;
 
 import java.util.Calendar;
 
@@ -41,13 +28,11 @@ public class EditActivity extends AppCompatActivity implements
     private static final int REQUEST_CODE_ENTER_EXTRA_DATA = 4;
 
     private static final String KEY_POSITION = "position";
-    private static final String KEY_ROW_ID = "rowid";
 
     private RecyclerView mRecyclerView;
     private RowAdapter mAdapter;
     private ProjectData mProjectData;
     private String mProjectName;
-    private GestureDetectorCompat mGestures;
     private ItemTouchHelper mRowItemTouchHelper;
 
     @Override
@@ -66,15 +51,6 @@ public class EditActivity extends AppCompatActivity implements
         mRecyclerView.setLayoutManager(layoutManager);
         // Get the project data
         mProjectData = new ProjectData(getApplicationContext(), MainActivity.PROJECTS_DB_NAME);
-
-//        // Set the header text
-//        View header = findViewById(R.id.header);
-//        // TODO change the header background color
-//        ((TextView)header.findViewById(R.id.start_date)).setText(R.string.header_start_date);
-//        ((TextView)header.findViewById(R.id.start_time)).setText(R.string.header_start_time);
-//        ((TextView)header.findViewById(R.id.end_date)).setText(R.string.header_end_date);
-//        ((TextView)header.findViewById(R.id.end_time)).setText(R.string.header_end_time);
-//        ((TextView)header.findViewById(R.id.extra)).setText(R.string.header_extra);
 
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)
@@ -141,37 +117,9 @@ public class EditActivity extends AppCompatActivity implements
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.edit, menu);
-        return true;
-    }
-
-    @Override
-    public void onBackPressed() {
-        // Save the project name in the result Intent, which ProjectActivity expects
-        Intent result = new Intent();
-        result.putExtra(Intent.EXTRA_TEXT, mProjectName);
-        setResult(RESULT_OK, result);
-        super.onBackPressed();
-    }
-
-    @Override
     protected void onDestroy() {
         mProjectData.close();
         super.onDestroy();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-//        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-
-        return super.onOptionsItemSelected(item);
     }
 
     @Override

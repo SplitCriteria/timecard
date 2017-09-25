@@ -49,7 +49,7 @@ public class ProjectActivity extends AppCompatActivity implements
 
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 1;
 
-    private static final String KEY_PROJECT_NAME = "project_name";
+    private static final String KEY_PROJECT_NAME = "com.splitcriteria.timecard.project_name";
 
     private static final String TAG_DIALOG_GET_EXTRA_DATA = "get_extra_data";
     private static final int REQUEST_GET_EXTRA_DATA = 0;
@@ -64,62 +64,16 @@ public class ProjectActivity extends AppCompatActivity implements
         }
     };
 
-    /**
-     * Dialog Fragment designed to collect extra data from the user
-     */
-    public static class GetExtraDataDialogFragment extends DialogFragment {
-
-        private static final String KEY_PROJECT_NAME = "project";
-
-        public GetExtraDataDialogFragment() {}
-
-        public static GetExtraDataDialogFragment createGetExtraDataDialog(String projectName) {
-            GetExtraDataDialogFragment dialogFragment = new GetExtraDataDialogFragment();
-            Bundle args = new Bundle();
-            args.putString(KEY_PROJECT_NAME, projectName);
-            dialogFragment.setArguments(args);
-            return dialogFragment;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-            View view = LayoutInflater.from(getActivity())
-                    .inflate(R.layout.dialog_user_input, null);
-            final EditText editText = view.findViewById(R.id.text);
-            final String projectName = getArguments().getString(KEY_PROJECT_NAME);
-            builder.setView(view)
-                    .setTitle(R.string.dialog_get_extra_data_title)
-                    .setPositiveButton(R.string.dialog_get_extra_data_positive_button,
-                            new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    ProjectActivity activity = (ProjectActivity)getActivity();
-                                    // Get the extra data from the user
-                                    String extraData = editText.getText() == null ? null :
-                                                       editText.getText().toString();
-                                    // Send the broadcast to clock in with the extra data
-                                    activity.sendBroadcast(
-                                            new ProjectReceiver.IntentBuilder(activity, projectName)
-                                                .setAction(ProjectReceiver.ACTION_CLOCK_IN)
-                                                .setExtraData(extraData)
-                                                .setSuppressToast(true)
-                                                .build());
-                                    // Handle the post clock/in out actions
-                                    activity.doPostClockInActions();
-                                }
-                            })
-                    .setNegativeButton(android.R.string.cancel, null);
-            return builder.create();
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_project);
         // Get the project name from the Intent
-        mProjectName = getIntent().getStringExtra(Intent.EXTRA_TEXT);
+        Intent intent = getIntent();
+        mProjectName = intent.getStringExtra(Intent.EXTRA_TEXT);
+        if (savedInstanceState != null) {
+            mProjectName = savedInstanceState.getString(KEY_PROJECT_NAME);
+        }
         // Set the title to the project name
         setTitle(mProjectName);
         // Get a reference to the Clock In/Out button
@@ -150,6 +104,13 @@ public class ProjectActivity extends AppCompatActivity implements
         // Set up the time updater
         mTimeUpdater = new Handler();
         mTimeUpdater.post(mUpdateTimeRunnable);
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        // Save the activity state (e.g. project name)
+        outState.putString(KEY_PROJECT_NAME, mProjectName);
+        super.onSaveInstanceState(outState);
     }
 
     @Override
