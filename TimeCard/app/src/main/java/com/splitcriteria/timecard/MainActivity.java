@@ -1,9 +1,15 @@
 package com.splitcriteria.timecard;
 
+import android.annotation.TargetApi;
 import android.app.Dialog;
 import android.app.DialogFragment;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
@@ -44,44 +50,7 @@ public class MainActivity extends AppCompatActivity
     private ItemTouchHelper mCurrentProjectsItemTouchHelper;
     private ItemTouchHelper mArchivedProjectsItemTouchHelper;
 
-    /**
-     * Dialog Fragment designed to display a message to a user
-     */
-    public static class SimpleMessageDialogFragment extends DialogFragment {
-
-        static final String TITLE = "title";
-        static final String MESSAGE = "message";
-
-        public SimpleMessageDialogFragment() {}
-
-        public static SimpleMessageDialogFragment buildSimpleMessageDialog(
-                String title, String message) {
-            SimpleMessageDialogFragment dialogFragment = new SimpleMessageDialogFragment();
-            Bundle args = new Bundle();
-            args.putString(TITLE, title);
-            args.putString(MESSAGE, message);
-            dialogFragment.setArguments(args);
-            return dialogFragment;
-        }
-
-        @Override
-        public Dialog onCreateDialog(Bundle savedInstanceState) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
-            Bundle arguments = getArguments();
-            String title = arguments.getString(TITLE);
-            String message = arguments.getString(MESSAGE);
-            builder.setTitle(title)
-                    .setMessage(message)
-                    .setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
-                        @Override
-                        public void onClick(DialogInterface dialogInterface, int i) {
-                            dismiss();
-                        }
-                    })
-                    .setNegativeButton(android.R.string.cancel, null);
-            return builder.create();
-        }
-    }
+    private static final int JOB_ID_BACKUP_SERVICE = 1;
 
     /**
      * Dialog Fragment designed to collect the initial project information from the user
@@ -378,7 +347,7 @@ public class MainActivity extends AppCompatActivity
     }
 
     private void alert(String title, String message) {
-        SimpleMessageDialogFragment.buildSimpleMessageDialog(title, message)
+        Dialogs.SimpleMessageDialogFragment.createSimpleMessageDialog(title, message)
                 .show(getFragmentManager(), TAG_DIALOG_SIMPLE_MESSAGE);
     }
 
@@ -387,6 +356,33 @@ public class MainActivity extends AppCompatActivity
             Intent projectIntent = new Intent(getApplicationContext(), ProjectActivity.class);
             projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
             startActivity(projectIntent);
+        }
+    }
+
+    @TargetApi(24)
+    private boolean scheduleBackupJob() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            JobScheduler jobScheduler = (JobScheduler) getSystemService(
+                    Context.JOB_SCHEDULER_SERVICE);
+            JobInfo jobInfo = jobScheduler.getPendingJob(JOB_ID_BACKUP_SERVICE);
+            if (jobInfo == null) {
+                JobInfo.Builder jobBuilder = new JobInfo.Builder(
+                        JOB_ID_BACKUP_SERVICE,
+                        new ComponentName(getPackageName(), BackupService.class.getName()));
+                jobInfo = jobBuilder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
+                                    .setPersisted(true)
+                                    .setRequiresCharging(true)
+                                    .build();
+                int result = jobScheduler.schedule(jobInfo);
+                return result == JobScheduler.RESULT_SUCCESS;
+            } else {
+                // The job already exists
+                return true;
+            }
+        } else {
+            // SDK doesn't allow using JobScheduler
+            // TODO Use another backup method
+            return false;
         }
     }
 }

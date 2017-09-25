@@ -9,10 +9,13 @@
     <string name="title_current_projects">TimeCard</string>
     <string name="title_archived_projects">TimeCard (archived)</string>
     <string name="title_create_project">Create Project</string>
+    <string name="title_edit_project">Edit %1$s</string>
     <string name="button_create">Create</string>
 
     <string name="dialog_get_extra_data_title">Add Extra Data</string>
     <string name="dialog_get_extra_data_positive_button">Add</string>
+    <string name="dialog_update_extra_data_positive_button">Update</string>
+    <string name="dialog_immutable_not_clocked_in">The project must be clocked in before changing the end date or time.</string>
 
     <string name="error_title">Error</string>
     <string name="error_project_exists">A project already exists named \'%1$s\'.</string>
@@ -53,11 +56,13 @@
     <string name="notification_extra_data">Extra Data</string>
     <string name="notification_extra_data_instruction">Enter extra data</string>
     <string name="notification_action_dismiss">Dismiss</string>
+    <string name="notification_row_deleted">Deleted event</string>
 
     <string name="menu_title">Time Card</string>
     <string name="menu_current_projects">Current Projects</string>
     <string name="menu_archived_projects">Archived Projects</string>
     <string name="menu_mark_notification">Mark Notification</string>
+    <string name="menu_edit_rows">Edit</string>
 
     <string name="exported_error">Failed to export \'%1$s\'</string>
     <string name="exported_success">Exported \'%1$s\'</string>
@@ -78,4 +83,9 @@
     <string name="setting_use_extra_data_title">Extra Data</string>
     <string name="setting_use_extra_data_description">When enabled, extra data is added to each project time-frame</string>
     <string name="setting_default_extra_label">Default Extra Data:</string>
+
+    <string name="header_start">Start</string>
+    <string name="header_end">End</string>
+    <string name="header_extra">Extra Data</string>
+    <string name="header_start_date">Date</string>
 </resources>

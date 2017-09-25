@@ -31,7 +31,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public class ProjectActivity extends AppCompatActivity implements
-        View.OnClickListener {
+        View.OnClickListener,
+        Dialogs.OnDialogResultListener {
 
     private String mProjectName;
     private ProjectData mProjectData;
@@ -48,7 +49,10 @@ public class ProjectActivity extends AppCompatActivity implements
 
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 1;
 
+    private static final String KEY_PROJECT_NAME = "project_name";
+
     private static final String TAG_DIALOG_GET_EXTRA_DATA = "get_extra_data";
+    private static final int REQUEST_GET_EXTRA_DATA = 0;
 
     private Runnable mUpdateTimeRunnable = new Runnable() {
         @Override
@@ -149,6 +153,12 @@ public class ProjectActivity extends AppCompatActivity implements
     }
 
     @Override
+    protected void onResume() {
+        // TODO refresh buttons
+        super.onResume();
+    }
+
+    @Override
     public void onClick(View view) {
         int clickedID = view.getId();
         if (clickedID == R.id.clock_in_out) {
@@ -170,15 +180,26 @@ public class ProjectActivity extends AppCompatActivity implements
                 // If the project uses extra data, then use the default or if not default, then
                 // show a dialog which allows the user to input the extra data
                 if (metadata.usesExtraData && TextUtils.isEmpty(metadata.defaultExtraData)) {
-                    GetExtraDataDialogFragment.createGetExtraDataDialog(mProjectName)
-                            .show(getFragmentManager(), TAG_DIALOG_GET_EXTRA_DATA);
+                    Bundle extras = new Bundle();
+                    extras.putString(KEY_PROJECT_NAME, mProjectName);
+                    Dialogs.UserInputDialogFragment.createUserInputDialog(
+                                    getString(R.string.dialog_get_extra_data_title), null,
+                                    R.string.dialog_get_extra_data_positive_button, null)
+                           .setOnDialogResultListener(this)
+                           .setRequestCode(REQUEST_GET_EXTRA_DATA)
+                           .putExtras(extras)
+                           .show(getFragmentManager(),
+                                 TAG_DIALOG_GET_EXTRA_DATA);
                 } else {
                     // Post a notification using our broadcast receiver
-                    sendBroadcast(new ProjectReceiver.IntentBuilder(this, mProjectName)
-                            .setAction(ProjectReceiver.ACTION_CLOCK_IN)
-                            .setExtraData(metadata.defaultExtraData)
-                            .setSuppressToast(true)
-                            .build());
+                    ProjectReceiver.IntentBuilder intentBuilder =
+                            new ProjectReceiver.IntentBuilder(this, mProjectName)
+                                    .setAction(ProjectReceiver.ACTION_CLOCK_IN)
+                                    .setSuppressToast(true);
+                    if (metadata.usesExtraData) {
+                        intentBuilder.setExtraData(metadata.defaultExtraData);
+                    }
+                    sendBroadcast(intentBuilder.build());
                     // Handle activity specific "clocked in" actions (e.g. showing a Snackbar to
                     // the user and starting the timer. This is done from another function so it
                     // can also be called from the GetExtraDataDialogFragment
@@ -217,6 +238,12 @@ public class ProjectActivity extends AppCompatActivity implements
                 sendBroadcast(new ProjectReceiver.IntentBuilder(this, mProjectName)
                         .setAction(ProjectReceiver.ACTION_POST_STICKY)
                         .build());
+                return true;
+            case R.id.edit:
+                // Start the edit activity
+                Intent editIntent = new Intent(this, EditActivity.class);
+                editIntent.putExtra(Intent.EXTRA_TEXT, mProjectName);
+                startActivity(editIntent);
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -369,6 +396,25 @@ public class ProjectActivity extends AppCompatActivity implements
             mClockInOutButton.setText(R.string.clock_out);
         } else {
             mClockInOutButton.setText(R.string.clock_in_instant);
+        }
+    }
+
+    @Override
+    public void onDialogResult(int requestCode, int resultCode, Intent intent) {
+        if (requestCode == REQUEST_GET_EXTRA_DATA && resultCode == Activity.RESULT_OK) {
+            // Get the user input
+            String extraData = intent.getStringExtra(Dialogs.UserInputDialogFragment.KEY_USER_INPUT);
+            // Get the extras set during the dialog fragment
+            Bundle extras = intent.getBundleExtra(Dialogs.EXTRA_BUNDLE);
+            String projectName = extras.getString(KEY_PROJECT_NAME);
+            // Send the broadcast to clock in with the extra data
+            sendBroadcast(new ProjectReceiver.IntentBuilder(this, projectName)
+                    .setAction(ProjectReceiver.ACTION_CLOCK_IN)
+                    .setExtraData(extraData)
+                    .setSuppressToast(true)
+                    .build());
+            // Handle the post clock/in out actions
+            doPostClockInActions();
         }
     }
 }

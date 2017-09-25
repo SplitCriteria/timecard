@@ -16,7 +16,7 @@ import java.util.List;
  * Created by Deuce on 9/9/17.
  */
 
-public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
+class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
 
     private List<String> mProjects = new ArrayList<>();
     private Comparator<String> mIgnoreCaseStringComparator = new Comparator<String>() {
@@ -26,15 +26,15 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
         }
     };
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        public CardView mCardView;
-        public ViewHolder(CardView v) {
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        CardView mCardView;
+        ViewHolder(CardView v) {
             super(v);
             mCardView = v;
         }
     }
 
-    public ProjectAdapter(String[] projects) {
+    ProjectAdapter(String[] projects) {
         // Add all the project names
         mProjects.addAll(Arrays.asList(projects));
         // Sort them, ignoring the case
@@ -43,10 +43,9 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
 
     @Override
     public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-        CardView v = (CardView) LayoutInflater.from(parent.getContext())
+        CardView root = (CardView) LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.card_project, parent, false);
-        ViewHolder vh = new ViewHolder(v);
-        return vh;
+        return new ViewHolder(root);
     }
 
     @Override
@@ -60,11 +59,11 @@ public class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHold
         return mProjects.size();
     }
 
-    public String getProjectName(int adapterPosition) {
+    String getProjectName(int adapterPosition) {
         return adapterPosition < mProjects.size() ? mProjects.get(adapterPosition) : null;
     }
 
-    public void remove(int adapterPosition) {
+    void remove(int adapterPosition) {
         mProjects.remove(adapterPosition);
         notifyItemRemoved(adapterPosition);
     }

@@ -45,6 +45,8 @@ public class ProjectData {
     private static final String KEY_START_TIME = "start";
     private static final String KEY_END_TIME = "end";
     private static final String KEY_EXTRA_DATA = "extra";
+    private static final String[] PROJECT_COLUMNS =
+            new String[] {"rowid", KEY_START_TIME, KEY_END_TIME, KEY_EXTRA_DATA};
 
     class Metadata {
         boolean archived;
@@ -55,9 +57,16 @@ public class ProjectData {
         int currentTimecard;
     }
 
-    class ProjectDataOpenHelper extends SQLiteOpenHelper {
+    class Row {
+        int id;
+        Calendar startTime;
+        Calendar endTime;
+        String extraData;
+    }
 
-        public ProjectDataOpenHelper(Context context, String dbName) {
+    private class ProjectDataOpenHelper extends SQLiteOpenHelper {
+
+        ProjectDataOpenHelper(Context context, String dbName) {
             super(context, dbName, null, DATABASE_VERSION);
         }
 
@@ -314,13 +323,17 @@ public class ProjectData {
 
     /**
      * Helper function which returns the current date time in an SQLite friendly format
+     * yyyy-MM-dd HH:mm:ss
      *
+     * @param date  a Date to convert to a date time format, or null to get a current time
      * @return  a String representing the current timestamp (year, month, date, and time)
      */
-    private String getDateTime() {
+    private String getDateTime(Date date) {
         SimpleDateFormat dateFormat = new SimpleDateFormat(
                 "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        Date date = new Date();
+        if (date == null) {
+            date = new Date();
+        }
         return dateFormat.format(date);
     }
 
@@ -332,12 +345,93 @@ public class ProjectData {
      * @return  a Date object, or null if there was a ParseException
      */
     private Date getDate(String datetime) {
+        if (TextUtils.isEmpty(datetime)) {
+            return null;
+        }
         SimpleDateFormat dateFormat = new SimpleDateFormat(
                 "yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         try {
             return dateFormat.parse(datetime);
         } catch (ParseException exception) {
             return null;
+        }
+    }
+
+    /**
+     * Gets the rows for a specific project
+     *
+     * @param project   the project name
+     * @return  the project's row data, or null if the project doesn't exist
+     */
+    List<Row> getRows(String project) {
+        if (exists(project)) {
+            List<Row> results = new ArrayList<>();
+            Cursor cursor = mDatabase.query(project, PROJECT_COLUMNS, null, null, null, null,
+                                            KEY_START_TIME + " DESC");
+            int rowIdIndex = cursor.getColumnIndex("rowid");
+            int startIndex = cursor.getColumnIndex(KEY_START_TIME);
+            int endIndex = cursor.getColumnIndex(KEY_END_TIME);
+            int extraIndex = cursor.getColumnIndex(KEY_EXTRA_DATA);
+            while (cursor.moveToNext()) {
+                Row row = new Row();
+                row.id = cursor.getInt(rowIdIndex);
+                row.startTime = Calendar.getInstance(Locale.getDefault());
+                row.startTime.setTime(getDate(cursor.getString(startIndex)));
+                // While it's not possible to have a missing start time, there
+                // could be a NULL end time if the project is clocked in
+                Date endDate = getDate(cursor.getString(endIndex));
+                if (endDate != null) {
+                    row.endTime = Calendar.getInstance(Locale.getDefault());
+                    row.endTime.setTime(getDate(cursor.getString(endIndex)));
+                } else {
+                    row.endTime = null;
+                }
+                row.extraData = cursor.getString(extraIndex);
+                results.add(row);
+            }
+            cursor.close();
+            return results;
+        } else {
+            return null;
+        }
+    }
+
+    /**
+     * Updates a row of a given project
+     *
+     * @param project   a project name
+     * @param row       a Row object
+     * @return  true, if the row was updated; false if the project doesn't exist
+     *          or the row update failed
+     */
+    boolean updateRow(String project, Row row) {
+        if (exists(project)) {
+            ContentValues cv =  new ContentValues();
+            cv.put(KEY_START_TIME, getDateTime(row.startTime.getTime()));
+            cv.put(KEY_END_TIME, getDateTime(row.endTime.getTime()));
+            cv.put(KEY_EXTRA_DATA, row.extraData);
+            int updated = mDatabase.update(project, cv, "rowid=?",
+                                           new String[] {Integer.toString(row.id)});
+            return updated != 0;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * Deletes a row from a specific project
+     *
+     * @param project    a project name
+     * @param id         a row id of a project's entry
+     * @return  true, if the row was deleted
+     */
+    boolean deleteRow(String project, int id) {
+        if (exists(project)) {
+            int deleted = mDatabase.delete(project, "rowid=?",
+                                           new String[] {Integer.toString(id)});
+            return deleted != 0;
+        } else {
+            return false;
         }
     }
 
@@ -364,7 +458,7 @@ public class ProjectData {
                 // Add a new row to the timecard
                 ContentValues cv = new ContentValues();
                 // Get the current timestamp
-                String dateTime = getDateTime();
+                String dateTime = getDateTime(null);
                 cv.put(KEY_START_TIME, dateTime);
                 // If this project is labeled as "no duration" then set the end time too
                 if (metadata.noDuration) {
@@ -411,10 +505,10 @@ public class ProjectData {
             if (metadata.currentTimecard != -1) {
                 // Add the stop time to the timecard
                 ContentValues cv = new ContentValues();
-                cv.put(KEY_END_TIME, getDateTime());
+                cv.put(KEY_END_TIME, getDateTime(null));
                 int rowID = metadata.currentTimecard;
                 int updated = mDatabase.update(
-                        "'"+project+"'", cv, "ROWID=?",
+                        "'"+project+"'", cv, "rowid=?",
                         new String[] {Integer.toString(rowID)});
                 // If unable to update the row, then there was an error clocking out
                 if (updated == 0) {
@@ -429,7 +523,7 @@ public class ProjectData {
                         "SELECT strftime('%s'," + KEY_END_TIME + ") - " +
                                "strftime('%s'," + KEY_START_TIME + ") AS 'time' " +
                         "FROM '" + project + "'" +
-                        "WHERE ROWID=?;",
+                        "WHERE rowid=?;",
                         new String[] {Integer.toString(rowID)});
                 int timeIndex = cursor.getColumnIndex("time");
                 while (cursor.moveToNext()) {
@@ -482,7 +576,7 @@ public class ProjectData {
             cursor.close();
             // Get the elapsed time of an ongoing timecard entry
             cursor = mDatabase.rawQuery(
-                    "SELECT strftime('%s','" + getDateTime() + "') - " +
+                    "SELECT strftime('%s','" + getDateTime(null) + "') - " +
                            "strftime('%s'," + KEY_START_TIME + ") AS 'time' " +
                     "FROM '" + project + "'" +
                     "WHERE " + KEY_END_TIME + " IS NULL;", null);

@@ -14,4 +14,9 @@
         android:icon="@drawable/ic_mark_notification"
         app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/edit"
+        android:title="@string/menu_edit_rows"
+        app:showAsAction="never" />
+
 </menu>
