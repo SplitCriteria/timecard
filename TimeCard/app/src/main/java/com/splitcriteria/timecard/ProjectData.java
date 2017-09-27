@@ -596,6 +596,22 @@ public class ProjectData {
         mDBHelper.close();
     }
 
+    /**
+     * Locks the database (no writes allowed) by beginning an immediate transaction
+     * which acquires a RESERVED lock on the database. Call unlock() to end the
+     * transaction and discard the lock.
+     */
+    void lock() {
+        mDatabase.beginTransactionNonExclusive();
+    }
+
+    /**
+     * Unlocks the database by ending a transaction.
+     */
+    void unlock() {
+        mDatabase.endTransaction();
+    }
+
     boolean dumpToCSV(String project, OutputStream os) {
         if (exists(project)) {
             Cursor cursor = mDatabase.rawQuery("SELECT * FROM '" + project + "';", null);

@@ -4,8 +4,6 @@
     <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
 
-    <string name="action_settings">Settings</string>
-
     <string name="title_current_projects">TimeCard</string>
     <string name="title_archived_projects">TimeCard (archived)</string>
     <string name="title_create_project">Create Project</string>
@@ -63,6 +61,7 @@
     <string name="menu_archived_projects">Archived Projects</string>
     <string name="menu_mark_notification">Mark Notification</string>
     <string name="menu_edit_rows">Edit</string>
+    <string name="menu_backup">Set Backup</string>
 
     <string name="exported_error">Failed to export \'%1$s\'</string>
     <string name="exported_success">Exported \'%1$s\'</string>
@@ -88,4 +87,8 @@
     <string name="header_end">End</string>
     <string name="header_extra">Extra Data</string>
     <string name="header_start_date">Date</string>
+
+    <string name="database_filename">projects.db</string>
+    <string name="shared_preferences">com.splitcriteria.timecard.SHARED_PREFERENCES</string>
+    <string name="key_backup_uri">com.splitcriteria.timecard.BACKUP_URI</string>
 </resources>

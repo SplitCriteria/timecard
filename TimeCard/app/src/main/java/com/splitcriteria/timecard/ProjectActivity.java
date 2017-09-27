@@ -1,21 +1,16 @@
 package com.splitcriteria.timecard;
 
 import android.app.Activity;
-import android.app.Dialog;
-import android.app.DialogFragment;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Handler;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -82,7 +77,7 @@ public class ProjectActivity extends AppCompatActivity implements
         // Get a reference to the Time
         mProjectTime = (TextView)findViewById(R.id.time);
         // Get a reference to the project data
-        mProjectData = new ProjectData(this, MainActivity.PROJECTS_DB_NAME);
+        mProjectData = new ProjectData(this, getString(R.string.database_filename));
         ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
         // Set up the project's settings
         setupToggle(R.id.no_duration, getString(R.string.setting_no_duration_title),

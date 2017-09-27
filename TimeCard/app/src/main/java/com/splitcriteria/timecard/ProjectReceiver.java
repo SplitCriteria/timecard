@@ -93,6 +93,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         if (action.equals(ACTION_CLOCK_TOGGLE)) {
             action = getToggleAction(context, projectName);
         }
+        String databaseFilename = context.getString(R.string.database_filename);
         // Handle the intent actions
         if (action.equals(ACTION_CLOCK_IN)) {
             // Get any extra data associated with clocking in
@@ -102,7 +103,7 @@ public class ProjectReceiver extends BroadcastReceiver {
             String remoteData = getRemoteData(intent);
             boolean hasRemoteData = remoteData != null;
             // Clock the project in
-            ProjectData pd = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+            ProjectData pd = new ProjectData(context, databaseFilename);
             pd.clockIn(projectName, hasRemoteData ? remoteData : extraData);
             ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
             pd.close();
@@ -131,7 +132,7 @@ public class ProjectReceiver extends BroadcastReceiver {
                 postNotification(context, projectName);
             }
         } else if (action.equals(ACTION_CLOCK_OUT)) {
-            ProjectData pd = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+            ProjectData pd = new ProjectData(context, databaseFilename);
             int duration = pd.clockOut(projectName);
             ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
             pd.close();
@@ -152,7 +153,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         } else if (action.equals(ACTION_DISMISS)) {
             dismissNotification(context, projectName);
         } else if (action.equals(ACTION_POST_STICKY)) {
-            ProjectData projectData = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+            ProjectData projectData = new ProjectData(context, databaseFilename);
             ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
             projectData.close();
             int messageID = metadata.noDuration ?
@@ -167,7 +168,8 @@ public class ProjectReceiver extends BroadcastReceiver {
     }
 
     private String getToggleAction(Context context, String projectName) {
-        ProjectData projectData = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+        ProjectData projectData = new ProjectData(
+                context, context.getString(R.string.database_filename));
         String action = projectData.isClockedIn(projectName) ? ACTION_CLOCK_OUT : ACTION_CLOCK_IN;
         projectData.close();
         return action;
@@ -269,7 +271,8 @@ public class ProjectReceiver extends BroadcastReceiver {
                 .setLabel(context.getString(R.string.notification_extra_data_instruction))
                 .build();
 
-        ProjectData projectData = new ProjectData(context, MainActivity.PROJECTS_DB_NAME);
+        ProjectData projectData = new ProjectData(
+                context, context.getString(R.string.database_filename));
         ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
         projectData.close();
         boolean isClockedIn = metadata.currentTimecard != -1;

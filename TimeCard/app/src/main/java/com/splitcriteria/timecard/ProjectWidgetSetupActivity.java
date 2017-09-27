@@ -44,7 +44,7 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
         setResult(RESULT_CANCELED, resultIntent);
 
         // Set up the spinner with project names
-        ProjectData pd = new ProjectData(this, MainActivity.PROJECTS_DB_NAME);
+        ProjectData pd = new ProjectData(this, getString(R.string.database_filename));
         Spinner projectSpinner = (Spinner)findViewById(R.id.projects);
         projectSpinner.setAdapter(new ArrayAdapter<>(this, R.layout.project_name,
                                                       pd.getProjectNames(false)));

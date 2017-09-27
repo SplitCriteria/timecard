@@ -50,7 +50,8 @@ public class EditActivity extends AppCompatActivity implements
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(this);
         mRecyclerView.setLayoutManager(layoutManager);
         // Get the project data
-        mProjectData = new ProjectData(getApplicationContext(), MainActivity.PROJECTS_DB_NAME);
+        mProjectData = new ProjectData(getApplicationContext(),
+                                       getString(R.string.database_filename));
 
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)
