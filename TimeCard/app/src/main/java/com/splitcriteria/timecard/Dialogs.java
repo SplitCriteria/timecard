@@ -26,76 +26,10 @@ import java.util.Locale;
 
 public class Dialogs {
 
-    static final String EXTRA_BUNDLE = "com.splitcriteria.timecard.extra_bundle";
-
-    interface OnDialogResultListener {
-        void onDialogResult(int requestCode, int resultCode, Intent intent);
-    }
-
-    /**
-     * A DialogResultFragment allows the client to attach an OnDialogResultListener
-     * which child fragments should call when a result if available. A result is
-     * returned with a set request code and a bundle of extras which can be retrieved
-     * by calling Intent.getBundleExtra(EXTRA_BUNDLE)
-     */
-    public static abstract class DialogResultFragment extends DialogFragment {
-        private int mRequestCode = -1;
-        private Bundle mExtras;
-        private OnDialogResultListener mListener;
-
-        DialogResultFragment setOnDialogResultListener(OnDialogResultListener listener) {
-            mListener = listener;
-            return this;
-        }
-
-        DialogResultFragment putExtras(Bundle extras) {
-            mExtras = extras;
-            // In case setArguments has already been called, go ahead and re-set the extras
-            Bundle args = getArguments();
-            if (args != null) {
-                args.putBundle(EXTRA_BUNDLE, mExtras);
-            }
-            return this;
-        }
-
-        DialogResultFragment setRequestCode(int requestCode) {
-            mRequestCode = requestCode;
-            return this;
-        }
-
-        @Override
-        public void setArguments(Bundle args) {
-            // Add the extra bundle to arguments to save it across destroy/creation cycles
-            args.putBundle(EXTRA_BUNDLE, mExtras);
-            super.setArguments(args);
-        }
-
-        /**
-         * Returns a result to a OnDialogResultListener which includes a result
-         *
-         * @param resultCode    the result code to return
-         * @param intent        an Intent to return, or null
-         * @return  true, if the listener existed and was called; false otherwise
-         */
-        protected boolean returnResult(int resultCode, Intent intent) {
-            if (intent == null) {
-                intent = new Intent();
-            }
-            Bundle extras = getArguments().getBundle(EXTRA_BUNDLE);
-            intent.putExtra(EXTRA_BUNDLE, extras);
-            if (mListener == null) {
-                return false;
-            } else {
-                mListener.onDialogResult(mRequestCode, resultCode, intent);
-                return true;
-            }
-        }
-    }
-
     /**
      * Dialog Fragment designed to display a message to a user
      */
-    public static class SimpleMessageDialogFragment extends DialogResultFragment {
+    public static class SimpleMessageDialogFragment extends ResultFragment {
 
         static final String TITLE = "title";
         static final String MESSAGE = "message";
@@ -142,7 +76,7 @@ public class Dialogs {
     /**
      * Dialog Fragment designed to collect extra data from the user
      */
-    public static class UserInputDialogFragment extends DialogResultFragment {
+    public static class UserInputDialogFragment extends ResultFragment {
 
         public static final String KEY_USER_INPUT = "user_input";
 
@@ -205,7 +139,7 @@ public class Dialogs {
     /**
      * Dialog Fragment designed to collect the initial project information from the user
      */
-    public static class PickDateDialogFragment extends DialogResultFragment implements
+    public static class PickDateDialogFragment extends ResultFragment implements
             DatePickerDialog.OnDateSetListener {
 
         public static final String KEY_YEAR = "year";
@@ -248,7 +182,7 @@ public class Dialogs {
     /**
      * Dialog Fragment designed to collect the initial project information from the user
      */
-    public static class PickTimeDialogFragment extends DialogResultFragment implements
+    public static class PickTimeDialogFragment extends ResultFragment implements
             TimePickerDialog.OnTimeSetListener {
 
         public static final String KEY_HOUR_OF_DAY = "hour_of_day";
