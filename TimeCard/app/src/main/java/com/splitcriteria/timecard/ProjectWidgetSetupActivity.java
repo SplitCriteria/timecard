@@ -1,15 +1,12 @@
 package com.splitcriteria.timecard;
 
-import android.app.PendingIntent;
 import android.appwidget.AppWidgetManager;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
-import android.widget.RemoteViews;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -44,7 +41,7 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
         setResult(RESULT_CANCELED, resultIntent);
 
         // Set up the spinner with project names
-        ProjectData pd = new ProjectData(this, getString(R.string.database_filename));
+        ProjectData pd = new ProjectData(this, getString(R.string.default_database_filename));
         Spinner projectSpinner = (Spinner)findViewById(R.id.projects);
         projectSpinner.setAdapter(new ArrayAdapter<>(this, R.layout.project_name,
                                                       pd.getProjectNames(false)));

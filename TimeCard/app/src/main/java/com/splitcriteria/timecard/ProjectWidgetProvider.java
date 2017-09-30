@@ -37,7 +37,7 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
 
         // Get any default extra data
         ProjectData projectData = new ProjectData(
-                context, context.getString(R.string.database_filename));
+                context, context.getString(R.string.default_database_filename));
         ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
         projectData.close();
         String extraData = metadata.usesExtraData ? metadata.defaultExtraData : null;

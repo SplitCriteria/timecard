@@ -67,7 +67,7 @@ public class EditFragment extends ResultFragment implements
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
         // Get the project data
-        mProjectData = new ProjectData(getActivity(), getString(R.string.database_filename));
+        mProjectData = new ProjectData(getActivity(), getString(R.string.default_database_filename));
 
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)

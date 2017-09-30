@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="@dimen/widget_padding"
-    tools:context="com.splitcriteria.timecard.BackupActivity">
+    tools:context="com.splitcriteria.timecard.SettingsActivity">
 
     <include
         layout="@layout/toggle_setting"

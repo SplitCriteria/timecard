@@ -77,7 +77,7 @@ public class ProjectActivity extends AppCompatActivity implements
         // Get a reference to the Time
         mProjectTime = (TextView)findViewById(R.id.time);
         // Get a reference to the project data
-        mProjectData = new ProjectData(this, getString(R.string.database_filename));
+        mProjectData = new ProjectData(this, getString(R.string.default_database_filename));
         ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
         // Set up the project's settings
         setupToggle(R.id.no_duration, getString(R.string.setting_no_duration_title),

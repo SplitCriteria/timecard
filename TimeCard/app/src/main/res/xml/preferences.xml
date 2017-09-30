@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <PreferenceCategory
+        android:title="@string/preferences_backup">
+
+        <SwitchPreference
+            android:key="@string/preferences_key_backup"
+            android:title="@string/preferences_title_backup"
+            android:summary="@string/preferences_description_backup"
+            android:defaultValue="false" />
+
+        <com.splitcriteria.timecard.SAFPreference
+            android:key="@string/preferences_key_backup_uri"
+            android:title="@string/preferences_title_backup_uri"
+            android:summary="@string/preferences_description_backup_uri" />
+
+    </PreferenceCategory>
+</PreferenceScreen>

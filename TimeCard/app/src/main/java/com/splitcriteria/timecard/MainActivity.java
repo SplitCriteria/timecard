@@ -1,6 +1,8 @@
 package com.splitcriteria.timecard;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.NonNull;
 import android.support.design.widget.FloatingActionButton;
 import android.view.View;
@@ -25,6 +27,9 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
+
+        // Set the default preferences
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
 
         // Add the project list fragment if it doesn't exist
         mProjectListFragment = (ProjectListFragment)getFragmentManager()
@@ -86,6 +91,8 @@ public class MainActivity extends AppCompatActivity
             // User wants to see the archived projects and they're not already shown
             mProjectListFragment.showArchivedProjects(true);
             refreshToolbarTitle();
+        } else if (id == R.id.settings) {
+            startActivity(new Intent(this, SettingsActivity.class));
         }
 
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);

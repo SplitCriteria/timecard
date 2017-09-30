@@ -1,12 +1,14 @@
 package com.splitcriteria.timecard;
 
 import android.annotation.TargetApi;
+import android.app.Service;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
-import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -16,7 +18,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.MalformedURLException;
 import java.net.URL;
 
 /**
@@ -25,26 +26,52 @@ import java.net.URL;
 
 @TargetApi(24)
 public class BackupService extends JobService {
+
+    private boolean mBackingUp = false;
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        // Only allow one backup at a time. If startService is called multiple
+        // times before another backup is complete, then ignore the backup request
+        if (!mBackingUp) {
+            mBackingUp = true;
+            startBackup(null);
+        }
+        return Service.START_NOT_STICKY;
+    }
+
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
+        return startBackup(jobParameters);
+    }
+
+    /**
+     * Starts a backup if the user preferences indicate a backup is desired and if there
+     * is a Uri to backup to.
+     *
+     * @param jobParameters job parameters, if this was called as a scheduled job
+     * @return  true, to indicate work is being done on another thread
+     */
+    private boolean startBackup(final JobParameters jobParameters) {
         // Get the backup Uri
-        SharedPreferences preferences = getSharedPreferences(
-                getString(R.string.shared_preferences), Context.MODE_PRIVATE);
-        String uriString = preferences.getString(getString(R.string.key_backup_uri), null);
-        // Exit early if there's not backup Uri
-        if (TextUtils.isEmpty(uriString)) {
+        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        String uriString = preferences.getString(getString(R.string.preferences_key_backup_uri),
+                null);
+        // Exit early if there's not backup Uri or if the user has not turned on the backup option
+        if (TextUtils.isEmpty(uriString) ||
+                !preferences.getBoolean(getString(R.string.preferences_key_backup), false)) {
             return false;
         }
         Uri target = Uri.parse(uriString);
         // Get the database Uri
-        File file = getDatabasePath(getString(R.string.database_filename));
+        File file = getDatabasePath(getString(R.string.default_database_filename));
         Uri source = Uri.fromFile(file);
         new AsyncTask<Uri, Void, String>() {
             @Override
             protected String doInBackground(Uri... uri) {
                 // Acquire a lock on the database
                 ProjectData projectData = new ProjectData(getApplicationContext(),
-                                                          getString(R.string.database_filename));
+                        getString(R.string.default_database_filename));
                 projectData.lock();
                 // Get the database source and backup target
                 URL source;
@@ -86,12 +113,25 @@ public class BackupService extends JobService {
                     // Results which are not numbers are errors
                     // TODO Log backup error somewhere for the user to see
                     Log.e("Backup Error", result);
+                } finally {
+                    // If this function was not called with job parameters, then it was
+                    // started from startService, so we stop ourselves by calling stopSelf
+                    // If, on the other hand, this job was created from JobScheduler, then
+                    // jobParameters is not null and we call jobFinished to indicate
+                    // our work is done.
+                    if (jobParameters == null) {
+                        // Reset the "backing up" flag
+                        mBackingUp = false;
+                        stopSelf();
+                    } else {
+                        jobFinished(jobParameters, false);
+                    }
                 }
             }
 
         }.execute(target, source);
 
-        // Return true to indicate processing work on another thread
+        // Work is being done on another thread
         return true;
     }
 

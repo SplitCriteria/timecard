@@ -12,8 +12,6 @@ import android.support.v4.app.RemoteInput;
 import android.text.TextUtils;
 import android.widget.Toast;
 
-import org.w3c.dom.Text;
-
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -93,7 +91,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         if (action.equals(ACTION_CLOCK_TOGGLE)) {
             action = getToggleAction(context, projectName);
         }
-        String databaseFilename = context.getString(R.string.database_filename);
+        String databaseFilename = context.getString(R.string.default_database_filename);
         // Handle the intent actions
         if (action.equals(ACTION_CLOCK_IN)) {
             // Get any extra data associated with clocking in
@@ -169,7 +167,7 @@ public class ProjectReceiver extends BroadcastReceiver {
 
     private String getToggleAction(Context context, String projectName) {
         ProjectData projectData = new ProjectData(
-                context, context.getString(R.string.database_filename));
+                context, context.getString(R.string.default_database_filename));
         String action = projectData.isClockedIn(projectName) ? ACTION_CLOCK_OUT : ACTION_CLOCK_IN;
         projectData.close();
         return action;
@@ -272,7 +270,7 @@ public class ProjectReceiver extends BroadcastReceiver {
                 .build();
 
         ProjectData projectData = new ProjectData(
-                context, context.getString(R.string.database_filename));
+                context, context.getString(R.string.default_database_filename));
         ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
         projectData.close();
         boolean isClockedIn = metadata.currentTimecard != -1;

@@ -6,12 +6,8 @@ import android.app.DialogFragment;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
-import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
-import android.content.UriPermission;
-import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -23,15 +19,10 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-
-import java.util.List;
 
 public class ProjectListFragment extends ResultFragment implements
         ResultFragment.OnResultListener {
@@ -69,7 +60,7 @@ public class ProjectListFragment extends ResultFragment implements
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
         // Get the project data
-        mProjectData = new ProjectData(getActivity(), getString(R.string.database_filename));
+        mProjectData = new ProjectData(getActivity(), getString(R.string.default_database_filename));
 
         // Set up the gesture detector to open the ProjectActivity on a user click
         mGestures = new GestureDetectorCompat(getActivity(), new GestureDetector.SimpleOnGestureListener() {
@@ -204,8 +195,6 @@ public class ProjectListFragment extends ResultFragment implements
                     }
                 });
 
-        setHasOptionsMenu(true);
-
         // Refresh the project names
         refreshProjectNames();
         // TODO test
@@ -227,30 +216,9 @@ public class ProjectListFragment extends ResultFragment implements
     }
 
     @Override
-    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        inflater.inflate(R.menu.main, menu);
-    }
-
-    @Override
     public void onDestroy() {
         mProjectData.close();
         super.onDestroy();
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        int id = item.getItemId();
-        if (id == R.id.backup) {
-            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
-            intent.setType("application/x-sqlite3");
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.putExtra(Intent.EXTRA_TITLE, DEFAULT_BACKUP_FILENAME);
-            startActivityForResult(intent, REQUEST_CODE_SET_BACKUP);
-            return true;
-        } else {
-            return super.onOptionsItemSelected(item);
-        }
     }
 
     public void showArchivedProjects(boolean showArchived) {
@@ -291,7 +259,7 @@ public class ProjectListFragment extends ResultFragment implements
             if (!TextUtils.isEmpty(projectName)) {
                 Activity activity = getActivity();
                 ProjectData projectData = new ProjectData(
-                        getActivity(), getString(R.string.database_filename));
+                        getActivity(), getString(R.string.default_database_filename));
                 if (projectData.exists(projectName)) {
                     alert(getString(R.string.error_title),
                             getString(R.string.error_project_exists, projectName));
@@ -316,37 +284,6 @@ public class ProjectListFragment extends ResultFragment implements
                     refreshProjectNames();
                 }
             }
-        }
-    }
-
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_SET_BACKUP && resultCode == Activity.RESULT_OK) {
-            // Release previous persisted backup Uri permissions
-            ContentResolver contentResolver = getActivity().getContentResolver();
-            List<UriPermission> uriPermissions = contentResolver.getPersistedUriPermissions();
-            for (UriPermission uriPermission : uriPermissions) {
-                contentResolver.releasePersistableUriPermission(uriPermission.getUri(),
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            }
-            // Get the user chosen Uri from the intent
-            Uri uri = data.getData();
-            // Take the persistent permissions to the Uri
-            contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION |
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            // Update the SharedPreferences
-            SharedPreferences preferences = getActivity().getSharedPreferences(
-                    getString(R.string.shared_preferences), Context.MODE_PRIVATE);
-            SharedPreferences.Editor editor = preferences.edit();
-            editor.putString(getString(R.string.key_backup_uri), uri.toString());
-            editor.apply();
-            // Start the backup update service
-            scheduleBackupJob();
-        } else {
-            super.onActivityResult(requestCode, resultCode, data);
         }
     }
 
