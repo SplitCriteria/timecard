@@ -30,17 +30,13 @@ public class ProjectListFragment extends ResultFragment implements
     private static final String TAG_DIALOG_CREATE_PROJECT = "dialog_project";
     private static final String TAG_DIALOG_SIMPLE_MESSAGE = "simple_message";
 
-    private static final String DEFAULT_BACKUP_FILENAME = "backup.db";
-
     private static final int MILLISECONDS_PER_DAY = 86400000;
     private static final int BACKUP_PERIOD = MILLISECONDS_PER_DAY;
 
-    private static final int REQUEST_CODE_SET_BACKUP = 0;
     private static final int REQUEST_CODE_CREATE_PROJECT = 1;
 
     private RecyclerView mRecyclerView;
     private ProjectAdapter mAdapter;
-    private ProjectData mProjectData;
     private GestureDetectorCompat mGestures;
     private boolean mShowingArchived = false;
     private ItemTouchHelper mCurrentProjectsItemTouchHelper;
@@ -59,8 +55,6 @@ public class ProjectListFragment extends ResultFragment implements
         mRecyclerView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
-        // Get the project data
-        mProjectData = new ProjectData(getActivity(), getString(R.string.default_database_filename));
 
         // Set up the gesture detector to open the ProjectActivity on a user click
         mGestures = new GestureDetectorCompat(getActivity(), new GestureDetector.SimpleOnGestureListener() {
@@ -127,7 +121,9 @@ public class ProjectListFragment extends ResultFragment implements
                             if (event != DISMISS_EVENT_ACTION) {
                                 // The snackbar timed out, or was dismissed
                                 // -- archive the project
-                                mProjectData.setArchived(projectName, true);
+                                ProjectData projectData = new ProjectData(getActivity());
+                                projectData.setArchived(projectName, true);
+                                projectData.close();
                             }
                             super.onDismissed(transientBottomBar, event);
                         }
@@ -181,11 +177,13 @@ public class ProjectListFragment extends ResultFragment implements
                                 if (event != DISMISS_EVENT_ACTION) {
                                     // The snackbar timed out, or was dismissed
                                     // -- delete/un-archive the project
+                                    ProjectData projectData = new ProjectData(getActivity());
                                     if (delete) {
-                                        mProjectData.deleteProject(projectName);
+                                        projectData.deleteProject(projectName);
                                     } else {
-                                        mProjectData.setArchived(projectName, false);
+                                        projectData.setArchived(projectName, false);
                                     }
+                                    projectData.close();
                                 }
                                 super.onDismissed(transientBottomBar, event);
                             }
@@ -204,7 +202,9 @@ public class ProjectListFragment extends ResultFragment implements
     }
 
     private void refreshProjectNames() {
-        mAdapter = new ProjectAdapter(mProjectData.getProjectNames(mShowingArchived));
+        ProjectData projectData = new ProjectData(getActivity());
+        mAdapter = new ProjectAdapter(projectData.getProjectNames(mShowingArchived));
+        projectData.close();
         mRecyclerView.swapAdapter(mAdapter, true);
         if (mShowingArchived) {
             mCurrentProjectsItemTouchHelper.attachToRecyclerView(null);
@@ -213,12 +213,6 @@ public class ProjectListFragment extends ResultFragment implements
             mArchivedProjectsItemTouchHelper.attachToRecyclerView(null);
             mCurrentProjectsItemTouchHelper.attachToRecyclerView(mRecyclerView);
         }
-    }
-
-    @Override
-    public void onDestroy() {
-        mProjectData.close();
-        super.onDestroy();
     }
 
     public void showArchivedProjects(boolean showArchived) {

@@ -38,7 +38,6 @@ public class EditFragment extends ResultFragment implements
 
     private RecyclerView mRecyclerView;
     private RowAdapter mAdapter;
-    private ProjectData mProjectData;
     private String mProjectName;
     private ItemTouchHelper mRowItemTouchHelper;
 
@@ -66,8 +65,6 @@ public class EditFragment extends ResultFragment implements
         mRecyclerView.setHasFixedSize(true);
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
-        // Get the project data
-        mProjectData = new ProjectData(getActivity(), getString(R.string.default_database_filename));
 
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)
@@ -110,7 +107,9 @@ public class EditFragment extends ResultFragment implements
                                 public void onDismissed(Snackbar transientBottomBar, int event) {
                                     if (event != DISMISS_EVENT_ACTION) {
                                         // Remove the row from the database
-                                        mProjectData.deleteRow(mProjectName, row.id);
+                                        ProjectData projectData = new ProjectData(getActivity());
+                                        projectData.deleteRow(mProjectName, row.id);
+                                        projectData.close();
                                     }
                                     super.onDismissed(transientBottomBar, event);
                                 }
@@ -131,17 +130,13 @@ public class EditFragment extends ResultFragment implements
     }
 
     private void refreshRows() {
-        mAdapter = new RowAdapter(mProjectData.getRows(mProjectName));
+        ProjectData projectData = new ProjectData(getActivity());
+        mAdapter = new RowAdapter(projectData.getRows(mProjectName));
+        projectData.close();
         mAdapter.addOnRowClickListener(this);
         mRecyclerView.swapAdapter(mAdapter, true);
         mRowItemTouchHelper.attachToRecyclerView(mRecyclerView);
         getActivity().setTitle(getString(R.string.title_edit_project, mProjectName));
-    }
-
-    @Override
-    public void onDestroy() {
-        mProjectData.close();
-        super.onDestroy();
     }
 
     @Override
@@ -247,7 +242,9 @@ public class EditFragment extends ResultFragment implements
                     break;
             }
             // Update the row data
-            mProjectData.updateRow(mProjectName, row);
+            ProjectData projectData = new ProjectData(getActivity());
+            projectData.updateRow(mProjectName, row);
+            projectData.close();
             // Notify the adapter of the update so it can refresh itself
             mAdapter.notifyItemChanged(position);
         }

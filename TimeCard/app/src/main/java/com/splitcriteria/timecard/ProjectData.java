@@ -89,6 +89,17 @@ public class ProjectData {
         }
     }
 
+    /**
+     * Creates a writable database using the applications default database filename
+     *
+     * @param context   a valid context
+     */
+    ProjectData(Context context) {
+        mDBHelper = new ProjectDataOpenHelper(
+                context, context.getString(R.string.default_database_filename));
+        mDatabase = mDBHelper.getWritableDatabase();
+    }
+
     ProjectData(Context context, String dbName) {
         mDBHelper = new ProjectDataOpenHelper(context, dbName);
         mDatabase = mDBHelper.getWritableDatabase();

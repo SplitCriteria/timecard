@@ -30,7 +30,6 @@ public class ProjectActivity extends AppCompatActivity implements
         ResultFragment.OnResultListener {
 
     private String mProjectName;
-    private ProjectData mProjectData;
     private TextView mProjectTime;
     private Button mClockInOutButton;
     private Handler mTimeUpdater;
@@ -53,9 +52,11 @@ public class ProjectActivity extends AppCompatActivity implements
         @Override
         public void run() {
             refreshProjectTime();
-            if (mProjectData.isClockedIn(mProjectName)) {
+            ProjectData projectData = new ProjectData(getApplicationContext());
+            if (projectData.isClockedIn(mProjectName)) {
                 mTimeUpdater.postDelayed(this, TIME_UPDATE_DELAY);
             }
+            projectData.close();
         }
     };
 
@@ -77,8 +78,8 @@ public class ProjectActivity extends AppCompatActivity implements
         // Get a reference to the Time
         mProjectTime = (TextView)findViewById(R.id.time);
         // Get a reference to the project data
-        mProjectData = new ProjectData(this, getString(R.string.default_database_filename));
-        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        ProjectData projectData = new ProjectData(this, getString(R.string.default_database_filename));
+        ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
         // Set up the project's settings
         setupToggle(R.id.no_duration, getString(R.string.setting_no_duration_title),
                     getString(R.string.setting_no_duration_description), metadata.noDuration);
@@ -88,12 +89,13 @@ public class ProjectActivity extends AppCompatActivity implements
                 getString(R.string.setting_use_location_description), metadata.trackLocation);
         setupExtraData();
         // Set the text for the clock in/out button.
-        if (mProjectData.isClockedIn(mProjectName)) {
+        if (projectData.isClockedIn(mProjectName)) {
             mClockInOutButton.setText(R.string.clock_out);
         } else {
             mClockInOutButton.setText(metadata.noDuration ?
                     R.string.clock_in_instant : R.string.clock_in);
         }
+        projectData.close();
         // Set the project time
         refreshProjectTime();
         // Set up the time updater
@@ -118,8 +120,9 @@ public class ProjectActivity extends AppCompatActivity implements
     public void onClick(View view) {
         int clickedID = view.getId();
         if (clickedID == R.id.clock_in_out) {
-            if (mProjectData.isClockedIn(mProjectName)) {
-                mProjectData.clockOut(mProjectName);
+            ProjectData projectData = new ProjectData(this);
+            if (projectData.isClockedIn(mProjectName)) {
+                projectData.clockOut(mProjectName);
                 Snackbar.make(view, R.string.project_clocked_out, Snackbar.LENGTH_SHORT).show();
                 // Remove the time updater
                 mTimeUpdater.removeCallbacks(mUpdateTimeRunnable);
@@ -132,7 +135,7 @@ public class ProjectActivity extends AppCompatActivity implements
                 mClockInOutButton.setText(R.string.clock_in);
             } else {
                 // Get the project's metadata
-                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
                 // If the project uses extra data, then use the default or if not default, then
                 // show a dialog which allows the user to input the extra data
                 if (metadata.usesExtraData && TextUtils.isEmpty(metadata.defaultExtraData)) {
@@ -162,6 +165,7 @@ public class ProjectActivity extends AppCompatActivity implements
                     doPostClockInActions();
                 }
             }
+            projectData.close();
         }
     }
 
@@ -219,7 +223,9 @@ public class ProjectActivity extends AppCompatActivity implements
                         try {
                             OutputStream os = new BufferedOutputStream(
                                     getContentResolver().openOutputStream(uri[0], "w"));
-                            isError = !mProjectData.dumpToCSV(mProjectName, os);
+                            ProjectData projectData = new ProjectData(getApplicationContext());
+                            isError = !projectData.dumpToCSV(mProjectName, os);
+                            projectData.close();
                             os.close();
                         } catch (IOException exception) {
                             isError = true;
@@ -250,13 +256,13 @@ public class ProjectActivity extends AppCompatActivity implements
     protected void onDestroy() {
         // Remove the time updater
         mTimeUpdater.removeCallbacks(mUpdateTimeRunnable);
-        // Close the project data
-        mProjectData.close();
         super.onDestroy();
     }
 
     private void refreshProjectTime() {
-        int projectTime = mProjectData.getProjectTime(mProjectName);
+        ProjectData projectData = new ProjectData(this);
+        int projectTime = projectData.getProjectTime(mProjectName);
+        projectData.close();
         String timeText;
         int days = projectTime / SEC_PER_DAY;
         int hours = (projectTime % SEC_PER_DAY) / SEC_PER_HOUR;
@@ -296,10 +302,11 @@ public class ProjectActivity extends AppCompatActivity implements
             @Override
             public void onCheckedChanged(CompoundButton compoundButton, boolean state) {
                 int clickedID = rootView.getId();
-                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                ProjectData projectData = new ProjectData(ProjectActivity.this);
+                ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
                 if (clickedID == R.id.no_duration) {
                     metadata.noDuration = state;
-                    if (mProjectData.isClockedIn(mProjectName)) {
+                    if (projectData.isClockedIn(mProjectName)) {
                         mClockInOutButton.setText(R.string.clock_out);
                     } else {
                         mClockInOutButton.setText(metadata.noDuration ?
@@ -313,7 +320,8 @@ public class ProjectActivity extends AppCompatActivity implements
                     findViewById(R.id.default_extra_label).setEnabled(state);
                     findViewById(R.id.default_extra_data).setEnabled(state);
                 }
-                mProjectData.updateMetadata(mProjectName, metadata);
+                projectData.updateMetadata(mProjectName, metadata);
+                projectData.close();
             }
         });
     }
@@ -321,7 +329,9 @@ public class ProjectActivity extends AppCompatActivity implements
     private void setupExtraData() {
         // Set the current default extra data
         EditText input = (EditText)findViewById(R.id.default_extra_data);
-        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        ProjectData projectData = new ProjectData(this);
+        ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
+        projectData.close();
         input.setText(metadata.defaultExtraData);
 
         // Add a TextWatcher to update the new default extra data
@@ -332,9 +342,11 @@ public class ProjectActivity extends AppCompatActivity implements
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) { }
             @Override
             public void afterTextChanged(Editable editable) {
-                ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+                ProjectData projectData = new ProjectData(ProjectActivity.this);
+                ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
                 metadata.defaultExtraData = editable == null ? "" : editable.toString();
-                mProjectData.updateMetadata(mProjectName, metadata);
+                projectData.updateMetadata(mProjectName, metadata);
+                projectData.close();
             }
         });
     }
@@ -342,7 +354,9 @@ public class ProjectActivity extends AppCompatActivity implements
     private void doPostClockInActions() {
         // Show a message Snackbar message to the user. If the project is not clocked
         // in, then that means the this project is "instant" -- same start/end times
-        ProjectData.Metadata metadata = mProjectData.getProjectMetadata(mProjectName);
+        ProjectData projectData = new ProjectData(this);
+        ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
+        projectData.close();
         Snackbar.make(mProjectTime, metadata.noDuration ?
                         R.string.project_clocked_in_instant : R.string.project_clocked_in,
                 Snackbar.LENGTH_SHORT).show();
