@@ -26,7 +26,7 @@ import java.util.Date;
  * Created by Deuce on 9/9/17.
  */
 
-public class ProjectData {
+class ProjectData {
 
     private ProjectDataOpenHelper mDBHelper;
     private SQLiteDatabase mDatabase;

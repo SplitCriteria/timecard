@@ -1,6 +1,7 @@
 package com.splitcriteria.timecard;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -87,7 +88,7 @@ public class EditFragment extends ResultFragment implements
                             // Remove the row from the adapter
                             final ProjectData.Row row = mAdapter.remove(adapterPosition);
                             // Add a snackbar message with the ability to UNDO the action
-                            Snackbar sb = Snackbar.make(mRecyclerView,
+                            final Snackbar sb = Snackbar.make(mRecyclerView,
                                     getString(R.string.notification_row_deleted),
                                     Snackbar.LENGTH_LONG);
                             // Set an undo action which doesn't actually do anything since
@@ -107,9 +108,10 @@ public class EditFragment extends ResultFragment implements
                                 public void onDismissed(Snackbar transientBottomBar, int event) {
                                     if (event != DISMISS_EVENT_ACTION) {
                                         // Remove the row from the database
-                                        ProjectData projectData = new ProjectData(getActivity());
+                                        Context context = sb.getContext();
+                                        ProjectData projectData = new ProjectData(context);
                                         projectData.deleteRow(mProjectName, row.id);
-                                        projectData.close(getActivity());
+                                        projectData.close(context);
                                     }
                                     super.onDismissed(transientBottomBar, event);
                                 }

@@ -103,7 +103,7 @@ public class ProjectListFragment extends ResultFragment implements
                     // Remove the project from the adapter
                     mAdapter.remove(viewHolder.getAdapterPosition());
                     // Add a snackbar message with the ability to UNDO the action
-                    Snackbar sb = Snackbar.make(mRecyclerView,
+                    final Snackbar sb = Snackbar.make(mRecyclerView,
                             getString(R.string.project_archived, projectName),
                             Snackbar.LENGTH_LONG);
                     // Set an undo action
@@ -121,9 +121,10 @@ public class ProjectListFragment extends ResultFragment implements
                             if (event != DISMISS_EVENT_ACTION) {
                                 // The snackbar timed out, or was dismissed
                                 // -- archive the project
-                                ProjectData projectData = new ProjectData(getActivity());
+                                Context context = sb.getContext();
+                                ProjectData projectData = new ProjectData(context);
                                 projectData.setArchived(projectName, true);
-                                projectData.close(getActivity());
+                                projectData.close(context);
                             }
                             super.onDismissed(transientBottomBar, event);
                         }
@@ -155,7 +156,7 @@ public class ProjectListFragment extends ResultFragment implements
                         mAdapter.remove(viewHolder.getAdapterPosition());
                         final boolean delete = (direction == ItemTouchHelper.RIGHT);
                         // Add a snackbar message with the ability to UNDO the action
-                        Snackbar sb = Snackbar.make(mRecyclerView,
+                        final Snackbar sb = Snackbar.make(mRecyclerView,
                                 getString(delete ? R.string.project_deleted :
                                                    R.string.project_unarchived,
                                           projectName),
@@ -177,13 +178,14 @@ public class ProjectListFragment extends ResultFragment implements
                                 if (event != DISMISS_EVENT_ACTION) {
                                     // The snackbar timed out, or was dismissed
                                     // -- delete/un-archive the project
-                                    ProjectData projectData = new ProjectData(getActivity());
+                                    Context context = sb.getContext();
+                                    ProjectData projectData = new ProjectData(context);
                                     if (delete) {
                                         projectData.deleteProject(projectName);
                                     } else {
                                         projectData.setArchived(projectName, false);
                                     }
-                                    projectData.close(getActivity());
+                                    projectData.close(context);
                                 }
                                 super.onDismissed(transientBottomBar, event);
                             }
