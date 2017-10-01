@@ -53,6 +53,7 @@ public class BackupService extends JobService {
      * @return  true, to indicate work is being done on another thread
      */
     private boolean startBackup(final JobParameters jobParameters) {
+        // TODO acquire a backup lock on the database
         // Get the backup Uri
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         String uriString = preferences.getString(getString(R.string.preferences_key_backup_uri),

@@ -123,7 +123,7 @@ public class ProjectListFragment extends ResultFragment implements
                                 // -- archive the project
                                 ProjectData projectData = new ProjectData(getActivity());
                                 projectData.setArchived(projectName, true);
-                                projectData.close();
+                                projectData.close(getActivity());
                             }
                             super.onDismissed(transientBottomBar, event);
                         }
@@ -183,7 +183,7 @@ public class ProjectListFragment extends ResultFragment implements
                                     } else {
                                         projectData.setArchived(projectName, false);
                                     }
-                                    projectData.close();
+                                    projectData.close(getActivity());
                                 }
                                 super.onDismissed(transientBottomBar, event);
                             }
@@ -204,7 +204,7 @@ public class ProjectListFragment extends ResultFragment implements
     private void refreshProjectNames() {
         ProjectData projectData = new ProjectData(getActivity());
         mAdapter = new ProjectAdapter(projectData.getProjectNames(mShowingArchived));
-        projectData.close();
+        projectData.close(getActivity());
         mRecyclerView.swapAdapter(mAdapter, true);
         if (mShowingArchived) {
             mCurrentProjectsItemTouchHelper.attachToRecyclerView(null);

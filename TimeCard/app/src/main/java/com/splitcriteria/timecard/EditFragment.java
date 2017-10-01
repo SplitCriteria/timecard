@@ -109,7 +109,7 @@ public class EditFragment extends ResultFragment implements
                                         // Remove the row from the database
                                         ProjectData projectData = new ProjectData(getActivity());
                                         projectData.deleteRow(mProjectName, row.id);
-                                        projectData.close();
+                                        projectData.close(getActivity());
                                     }
                                     super.onDismissed(transientBottomBar, event);
                                 }
@@ -132,7 +132,7 @@ public class EditFragment extends ResultFragment implements
     private void refreshRows() {
         ProjectData projectData = new ProjectData(getActivity());
         mAdapter = new RowAdapter(projectData.getRows(mProjectName));
-        projectData.close();
+        projectData.close(getActivity());
         mAdapter.addOnRowClickListener(this);
         mRecyclerView.swapAdapter(mAdapter, true);
         mRowItemTouchHelper.attachToRecyclerView(mRecyclerView);
@@ -244,7 +244,7 @@ public class EditFragment extends ResultFragment implements
             // Update the row data
             ProjectData projectData = new ProjectData(getActivity());
             projectData.updateRow(mProjectName, row);
-            projectData.close();
+            projectData.close(getActivity());
             // Notify the adapter of the update so it can refresh itself
             mAdapter.notifyItemChanged(position);
         }

@@ -46,7 +46,7 @@ public class ProjectWidgetSetupActivity extends AppCompatActivity implements
         projectSpinner.setAdapter(new ArrayAdapter<>(this, R.layout.project_name,
                                                       pd.getProjectNames(false)));
         projectSpinner.setOnItemSelectedListener(this);
-        pd.close();
+        pd.close(this);
 
         // Set up the on click listener to create the widget
         findViewById(R.id.config).setOnClickListener(this);

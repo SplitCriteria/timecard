@@ -95,14 +95,19 @@ public class ProjectData {
      * @param context   a valid context
      */
     ProjectData(Context context) {
-        mDBHelper = new ProjectDataOpenHelper(
-                context, context.getString(R.string.default_database_filename));
-        mDatabase = mDBHelper.getWritableDatabase();
+        // Make sure a lock can be acquired
+        if (DatabaseLock.acquire(context, DatabaseLock.DATABASE)) {
+            mDBHelper = new ProjectDataOpenHelper(
+                    context, context.getString(R.string.default_database_filename));
+            mDatabase = mDBHelper.getWritableDatabase();
+        }
     }
 
     ProjectData(Context context, String dbName) {
-        mDBHelper = new ProjectDataOpenHelper(context, dbName);
-        mDatabase = mDBHelper.getWritableDatabase();
+        if (DatabaseLock.acquire(context, DatabaseLock.DATABASE)) {
+            mDBHelper = new ProjectDataOpenHelper(context, dbName);
+            mDatabase = mDBHelper.getWritableDatabase();
+        }
     }
 
     private Map<String, Metadata> getMetadata() {
@@ -603,8 +608,10 @@ public class ProjectData {
         }
     }
 
-    void close() {
+    void close(Context context) {
         mDBHelper.close();
+        // Release the database lock
+        DatabaseLock.release(context, DatabaseLock.DATABASE);
     }
 
     /**

@@ -39,7 +39,7 @@ public class ProjectWidgetProvider extends AppWidgetProvider {
         ProjectData projectData = new ProjectData(
                 context, context.getString(R.string.default_database_filename));
         ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
-        projectData.close();
+        projectData.close(context);
         String extraData = metadata.usesExtraData ? metadata.defaultExtraData : null;
 
         // Create a broadcast intent to clock in/out the widget

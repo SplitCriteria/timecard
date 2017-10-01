@@ -104,7 +104,7 @@ public class ProjectReceiver extends BroadcastReceiver {
             ProjectData pd = new ProjectData(context, databaseFilename);
             pd.clockIn(projectName, hasRemoteData ? remoteData : extraData);
             ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
-            pd.close();
+            pd.close(context);
             // If no extra data is given, check for default data
             if (metadata.usesExtraData && TextUtils.isEmpty(extraData)) {
                 extraData = metadata.defaultExtraData;
@@ -133,7 +133,7 @@ public class ProjectReceiver extends BroadcastReceiver {
             ProjectData pd = new ProjectData(context, databaseFilename);
             int duration = pd.clockOut(projectName);
             ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
-            pd.close();
+            pd.close(context);
             if (intent.getBooleanExtra(KEY_FROM_STICKY, false)) {
                 postStickyNotification(context, projectName,
                         getStickyNotificationMessage(context, metadata, null, duration));
@@ -153,7 +153,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         } else if (action.equals(ACTION_POST_STICKY)) {
             ProjectData projectData = new ProjectData(context, databaseFilename);
             ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
-            projectData.close();
+            projectData.close(context);
             int messageID = metadata.noDuration ?
                     R.string.notification_sticky_mark_time_instructions :
                     metadata.currentTimecard == -1 ?
@@ -169,7 +169,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         ProjectData projectData = new ProjectData(
                 context, context.getString(R.string.default_database_filename));
         String action = projectData.isClockedIn(projectName) ? ACTION_CLOCK_OUT : ACTION_CLOCK_IN;
-        projectData.close();
+        projectData.close(context);
         return action;
     }
 
@@ -272,7 +272,7 @@ public class ProjectReceiver extends BroadcastReceiver {
         ProjectData projectData = new ProjectData(
                 context, context.getString(R.string.default_database_filename));
         ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
-        projectData.close();
+        projectData.close(context);
         boolean isClockedIn = metadata.currentTimecard != -1;
 
         // Add a Clock In/Out or Mark Time action

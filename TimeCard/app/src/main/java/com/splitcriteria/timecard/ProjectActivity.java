@@ -56,7 +56,7 @@ public class ProjectActivity extends AppCompatActivity implements
             if (projectData.isClockedIn(mProjectName)) {
                 mTimeUpdater.postDelayed(this, TIME_UPDATE_DELAY);
             }
-            projectData.close();
+            projectData.close(getApplicationContext());
         }
     };
 
@@ -95,7 +95,7 @@ public class ProjectActivity extends AppCompatActivity implements
             mClockInOutButton.setText(metadata.noDuration ?
                     R.string.clock_in_instant : R.string.clock_in);
         }
-        projectData.close();
+        projectData.close(this);
         // Set the project time
         refreshProjectTime();
         // Set up the time updater
@@ -165,7 +165,7 @@ public class ProjectActivity extends AppCompatActivity implements
                     doPostClockInActions();
                 }
             }
-            projectData.close();
+            projectData.close(this);
         }
     }
 
@@ -225,7 +225,7 @@ public class ProjectActivity extends AppCompatActivity implements
                                     getContentResolver().openOutputStream(uri[0], "w"));
                             ProjectData projectData = new ProjectData(getApplicationContext());
                             isError = !projectData.dumpToCSV(mProjectName, os);
-                            projectData.close();
+                            projectData.close(getApplicationContext());
                             os.close();
                         } catch (IOException exception) {
                             isError = true;
@@ -262,7 +262,7 @@ public class ProjectActivity extends AppCompatActivity implements
     private void refreshProjectTime() {
         ProjectData projectData = new ProjectData(this);
         int projectTime = projectData.getProjectTime(mProjectName);
-        projectData.close();
+        projectData.close(this);
         String timeText;
         int days = projectTime / SEC_PER_DAY;
         int hours = (projectTime % SEC_PER_DAY) / SEC_PER_HOUR;
@@ -321,7 +321,7 @@ public class ProjectActivity extends AppCompatActivity implements
                     findViewById(R.id.default_extra_data).setEnabled(state);
                 }
                 projectData.updateMetadata(mProjectName, metadata);
-                projectData.close();
+                projectData.close(getApplicationContext());
             }
         });
     }
@@ -331,7 +331,7 @@ public class ProjectActivity extends AppCompatActivity implements
         EditText input = (EditText)findViewById(R.id.default_extra_data);
         ProjectData projectData = new ProjectData(this);
         ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
-        projectData.close();
+        projectData.close(this);
         input.setText(metadata.defaultExtraData);
 
         // Add a TextWatcher to update the new default extra data
@@ -346,7 +346,7 @@ public class ProjectActivity extends AppCompatActivity implements
                 ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
                 metadata.defaultExtraData = editable == null ? "" : editable.toString();
                 projectData.updateMetadata(mProjectName, metadata);
-                projectData.close();
+                projectData.close(getApplicationContext());
             }
         });
     }
@@ -356,7 +356,7 @@ public class ProjectActivity extends AppCompatActivity implements
         // in, then that means the this project is "instant" -- same start/end times
         ProjectData projectData = new ProjectData(this);
         ProjectData.Metadata metadata = projectData.getProjectMetadata(mProjectName);
-        projectData.close();
+        projectData.close(this);
         Snackbar.make(mProjectTime, metadata.noDuration ?
                         R.string.project_clocked_in_instant : R.string.project_clocked_in,
                 Snackbar.LENGTH_SHORT).show();

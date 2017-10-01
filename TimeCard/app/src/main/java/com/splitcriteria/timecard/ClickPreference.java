@@ -13,23 +13,23 @@ import java.util.List;
  * Created by Deuce on 9/29/17.
  */
 
-class SAFPreference extends Preference {
+class ClickPreference extends Preference {
 
     interface OnClickListener {
-        void onClick();
+        void onClick(Preference preference);
     }
 
     private List<OnClickListener> mListeners = new ArrayList<>();
 
-    public SAFPreference(Context context, AttributeSet attrs, int defStyleAttr) {
+    public ClickPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
     }
 
-    public SAFPreference(Context context, AttributeSet attrs) {
+    public ClickPreference(Context context, AttributeSet attrs) {
         super(context, attrs);
     }
 
-    public SAFPreference(Context context) {
+    public ClickPreference(Context context) {
         super(context);
     }
 
@@ -47,16 +47,7 @@ class SAFPreference extends Preference {
     protected void onClick() {
         super.onClick();
         for (OnClickListener listener : mListeners) {
-            listener.onClick();
+            listener.onClick(this);
         }
-    }
-
-    void setUri(Uri uri) {
-        persistString(uri.toString());
-    }
-
-    Uri getUri() {
-        String uriString = getPersistedString(null);
-        return !TextUtils.isEmpty(uriString) ? Uri.parse(uriString) : null;
     }
 }

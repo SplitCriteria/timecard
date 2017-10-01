@@ -10,10 +10,20 @@
             android:summary="@string/preferences_description_backup"
             android:defaultValue="false" />
 
-        <com.splitcriteria.timecard.SAFPreference
+        <com.splitcriteria.timecard.UriPreference
             android:key="@string/preferences_key_backup_uri"
             android:title="@string/preferences_title_backup_uri"
             android:summary="@string/preferences_description_backup_uri" />
+
+        <com.splitcriteria.timecard.ClickPreference
+            android:key="@string/preferences_key_restore"
+            android:title="@string/preferences_title_restore"
+            android:summary="@string/preferences_description_restore" />
+
+        <com.splitcriteria.timecard.ClickPreference
+            android:key="@string/preferences_key_restore_alt"
+            android:title="@string/preferences_title_restore_alt"
+            android:summary="@string/preferences_description_restore_alt" />
 
     </PreferenceCategory>
 </PreferenceScreen>
