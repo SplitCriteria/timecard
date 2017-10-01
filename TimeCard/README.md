@@ -14,9 +14,16 @@ Examples:
 - [x] Add additional data to be associated with time data (e.g. billing rate, weight)
 - [x] Add project settings in ProjectActivity
 - [x] Add extra data to be added via a "Clock Out" notification
-- [ ] Create a persistent backup (e.g. Service which automatically backs up database)
+- [x] Create a persistent backup (e.g. Service which automatically backs up database)
+- [x] Create a backup activity which allows removal of backup,
+- [ ] Allow a widget to get Extra Data from a user if they are clicking into a project which uses extra data but doesn't have default data specified
+- [ ] Allow recording/showing of backup/restore history, etc.
 - [ ] Add location tracking
 - [ ] Create Shortcut to replace the clock in/out widget
 - [ ] Add ability to rename projects
-- [ ] Add ability to import backed-up project data
+- [x] Add ability to import backed-up project data
 - [ ] Add ability to sort project list (e.g. most used, favorite, custom order)
+- [x] Edit database using Date Picker
+- [ ] Add Extra Data Title use for export (could include commas in title and data to add virtually unlimited extra columns)
+- [ ] Add option to automatically capture broadcast events (e.g. phone up/down with Contact name as extra data)
+- [ ] Use LocalBroadcastManager and/or Intent.setPackage() for clock in/out and ProjectReceiver
