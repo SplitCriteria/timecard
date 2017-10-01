@@ -166,6 +166,8 @@ public class ProjectData {
         Cursor cursor = mDatabase.rawQuery("SELECT " + KEY_PROJECT_NAME + " " +
                                            "FROM " + PROJECTS_TABLE + ";", null);
         List<String> names = new ArrayList<>();
+        // Add the protected metadata table name (so it isn't overwritten)
+        names.add(PROJECTS_TABLE);
         int nameIndex = cursor.getColumnIndex(KEY_PROJECT_NAME);
         while (cursor.moveToNext()) {
             names.add(cursor.getString(nameIndex));
@@ -618,9 +620,15 @@ public class ProjectData {
      * Locks the database (no writes allowed) by beginning an immediate transaction
      * which acquires a RESERVED lock on the database. Call unlock() to end the
      * transaction and discard the lock.
+     *
+     * @param exclusive set to true to gain an exclusive lock
      */
-    void lock() {
-        mDatabase.beginTransactionNonExclusive();
+    void lock(boolean exclusive) {
+        if (exclusive) {
+            mDatabase.beginTransaction();
+        } else {
+            mDatabase.beginTransactionNonExclusive();
+        }
     }
 
     /**

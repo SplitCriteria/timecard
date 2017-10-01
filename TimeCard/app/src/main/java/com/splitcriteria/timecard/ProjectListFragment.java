@@ -254,10 +254,12 @@ public class ProjectListFragment extends ResultFragment implements
                 Activity activity = getActivity();
                 ProjectData projectData = new ProjectData(
                         getActivity(), getString(R.string.default_database_filename));
+                // If the project already exists, then fail
                 if (projectData.exists(projectName)) {
                     alert(getString(R.string.error_title),
                             getString(R.string.error_project_exists, projectName));
                 } else {
+                    // Add the project if it doesn't already exist
                     if (projectData.addProject(projectName)) {
                         Snackbar.make(
                                 mRecyclerView, R.string.project_created,
@@ -265,7 +267,7 @@ public class ProjectListFragment extends ResultFragment implements
                         // Open the project activity for the newly created project
                         openProjectActivity(projectName);
                     } else {
-
+                        // Notify the user if that the project name already exists
                         DialogFragment alert = Dialogs.SimpleMessageDialogFragment
                                 .createSimpleMessageDialog(
                                         getString(R.string.error_title),
@@ -277,6 +279,7 @@ public class ProjectListFragment extends ResultFragment implements
                     }
                     refreshProjectNames();
                 }
+                projectData.close(activity);
             }
         }
     }

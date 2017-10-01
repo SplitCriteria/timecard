@@ -35,14 +35,23 @@ public class BackupService extends JobService {
         // times before another backup is complete, then ignore the backup request
         if (!mBackingUp) {
             mBackingUp = true;
-            startBackup(null);
+            if (!startBackup(null)) {
+                // If unable to start the backup, then stop the service
+                mBackingUp = false;
+                stopSelf();
+            }
         }
         return Service.START_NOT_STICKY;
     }
 
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
-        return startBackup(jobParameters);
+        if (startBackup(jobParameters)) {
+            return true;
+        } else {
+            jobFinished(jobParameters, true);
+            return false;
+        }
     }
 
     /**
@@ -53,7 +62,6 @@ public class BackupService extends JobService {
      * @return  true, to indicate work is being done on another thread
      */
     private boolean startBackup(final JobParameters jobParameters) {
-        // TODO acquire a backup lock on the database
         // Get the backup Uri
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         String uriString = preferences.getString(getString(R.string.preferences_key_backup_uri),
@@ -67,13 +75,12 @@ public class BackupService extends JobService {
         // Get the database Uri
         File file = getDatabasePath(getString(R.string.default_database_filename));
         Uri source = Uri.fromFile(file);
+        if (!DatabaseLock.acquire(this, DatabaseLock.BACKUP)) {
+            return false;
+        }
         new AsyncTask<Uri, Void, String>() {
             @Override
             protected String doInBackground(Uri... uri) {
-                // Acquire a lock on the database
-                ProjectData projectData = new ProjectData(getApplicationContext(),
-                        getString(R.string.default_database_filename));
-                projectData.lock();
                 // Get the database source and backup target
                 URL source;
                 Uri target = uri[0];
@@ -82,9 +89,14 @@ public class BackupService extends JobService {
                     source = new URL(uri[1].toString());
                     // Copy the source to the target
                     InputStream in = new BufferedInputStream(source.openStream());
-                    OutputStream out = new BufferedOutputStream(
-                            getContentResolver().openOutputStream(target, "w"));
-                    byte[] buffer = new byte[1000000];
+                    OutputStream out = getContentResolver().openOutputStream(target, "w");
+                    if (out == null) {
+                        return getString(R.string.error_backup_title,
+                                getString(R.string.error_backup_unable_to_open_target));
+                    }
+                    out = new BufferedOutputStream(out);
+                    byte[] buffer = new byte[
+                            getResources().getInteger(R.integer.buffer_size_bytes)];
                     int bytesRead;
                     while ((bytesRead = in.read(buffer)) > 0) {
                         out.write(buffer, 0, bytesRead);
@@ -94,9 +106,6 @@ public class BackupService extends JobService {
                     out.close();
                 } catch (IOException exception) {
                     return exception.toString();
-                } finally {
-                    // Unlock the database
-                    projectData.unlock();
                 }
                 // Return the number of bytes written on success
                 return Integer.toString(bytesWritten);
@@ -115,6 +124,8 @@ public class BackupService extends JobService {
                     // TODO Log backup error somewhere for the user to see
                     Log.e("Backup Error", result);
                 } finally {
+                    // Release the database lock
+                    DatabaseLock.release(BackupService.this, DatabaseLock.BACKUP);
                     // If this function was not called with job parameters, then it was
                     // started from startService, so we stop ourselves by calling stopSelf
                     // If, on the other hand, this job was created from JobScheduler, then

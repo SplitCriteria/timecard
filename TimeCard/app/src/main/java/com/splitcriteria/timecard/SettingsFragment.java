@@ -13,6 +13,8 @@ import android.os.IBinder;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.support.annotation.Nullable;
+import android.support.design.widget.Snackbar;
+import android.widget.Toast;
 
 import java.util.List;
 
@@ -70,18 +72,14 @@ public class SettingsFragment extends PreferenceFragment implements
                 return true;
             }
         });
-    }
-
-    @Override
-    public void onStart() {
-        super.onStart();
+        // Bind to the restore service
         getActivity().bindService(new Intent(getActivity(), RestoreService.class),
                 mRestoreConnection, Context.BIND_AUTO_CREATE);
     }
 
     @Override
-    public void onStop() {
-        super.onStop();
+    public void onDestroy() {
+        super.onDestroy();
         if (mBound) {
             getActivity().unbindService(mRestoreConnection);
             mBound = false;
@@ -114,7 +112,10 @@ public class SettingsFragment extends PreferenceFragment implements
             // not set, then the backup will be ignored in BackupService
             getActivity().startService(new Intent(getActivity(), BackupService.class));
         } else if (requestCode == REQUEST_CODE_OPEN_DOCUMENT && resultCode == Activity.RESULT_OK) {
-
+            // Restore the database from the user chosen database
+            if (mBound) {
+                mRestoreService.restore(data.getData());
+            }
         } else {
             super.onActivityResult(requestCode, resultCode, data);
         }
@@ -148,7 +149,7 @@ public class SettingsFragment extends PreferenceFragment implements
         } else if (preference.getKey().equals(getString(R.string.preferences_key_restore_alt))) {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
             intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("application/x-sqlite3");
+            intent.setType("*/*");//application/x-sqlite3");
             intent.putExtra(Intent.EXTRA_TITLE, "*.db");
             startActivityForResult(intent, REQUEST_CODE_OPEN_DOCUMENT);
         }
@@ -156,24 +157,7 @@ public class SettingsFragment extends PreferenceFragment implements
 
     @Override
     public void onRestored(boolean success, String errorMsg) {
-
+        String message = success ? getString(R.string.toast_restore_success) : errorMsg;
+        Toast.makeText(getActivity(), message, Toast.LENGTH_SHORT).show();
     }
-
-//    @Override
-//    public void onResume() {
-//        super.onResume();
-//        getPreferenceScreen().getSharedPreferences()
-//                .registerOnSharedPreferenceChangeListener(this);
-//    }
-//
-//    @Override
-//    public void onPause() {
-//        super.onPause();
-//        getPreferenceScreen().getSharedPreferences()
-//                .unregisterOnSharedPreferenceChangeListener(this);
-//    }
-//
-//    @Override
-//    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-//    }
 }

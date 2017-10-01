@@ -17,7 +17,8 @@ import android.view.MenuItem;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private static final String TAG_PROJECT_LIST_FRAGMENT = "com.splitcriteria.timecard.TAG_PROJECT_LIST_FRAGMENT";
+    private static final String TAG_PROJECT_LIST_FRAGMENT =
+            "com.splitcriteria.timecard.TAG_PROJECT_LIST_FRAGMENT";
 
     private ProjectListFragment mProjectListFragment;
 
@@ -30,6 +31,9 @@ public class MainActivity extends AppCompatActivity
 
         // Set the default preferences
         PreferenceManager.setDefaultValues(this, R.xml.preferences, false);
+
+        // Release any unresolved database locks
+        DatabaseLock.forceRelease(this);
 
         // Add the project list fragment if it doesn't exist
         mProjectListFragment = (ProjectListFragment)getFragmentManager()

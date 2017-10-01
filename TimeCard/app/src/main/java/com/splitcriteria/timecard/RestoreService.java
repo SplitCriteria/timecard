@@ -1,6 +1,7 @@
 package com.splitcriteria.timecard;
 
 import android.app.Service;
+import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
@@ -11,6 +12,13 @@ import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.text.TextUtils;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -150,6 +158,9 @@ public class RestoreService extends Service {
     }
 
     private void startRestore(Uri restoreFromUri) {
+        // Get the target Uri
+        File database = getDatabasePath(getString(R.string.default_database_filename));
+        Uri targetUri = Uri.fromFile(database);
         // Acquire a lock on the database
         if (!DatabaseLock.acquire(this, DatabaseLock.RESTORE)) {
             callOnRestoreListeners(false,
@@ -163,9 +174,36 @@ public class RestoreService extends Service {
 
             @Override
             protected String doInBackground(Uri... uris) {
-                Uri backupUri = uris[0];
+                Uri restoreFromUri = uris[0];
+                Uri targetUri = uris[1];
                 try {
-                } finally {
+                    // Open the input and output streams
+                    ContentResolver contentResolver = getContentResolver();
+                    InputStream in = contentResolver.openInputStream(restoreFromUri);
+                    if (in == null) {
+                        return getString(R.string.error_restore_title,
+                                getString(R.string.error_restore_unable_to_open_source));
+                    }
+                    in = new BufferedInputStream(in);
+                    OutputStream out = contentResolver.openOutputStream(targetUri, "w");
+                    if (out == null) {
+                        return getString(R.string.error_restore_title,
+                                getString(R.string.error_restore_unable_to_open_target));
+                    }
+                    out = new BufferedOutputStream(out);
+                    // Copy the restored file to the target location
+                    byte[] buffer = new byte[
+                            getResources().getInteger(R.integer.buffer_size_bytes)];
+                    int bytesRead;
+                    while ((bytesRead = in.read(buffer)) > 0) {
+                        out.write(buffer, 0, bytesRead);
+                    }
+                    in.close();
+                    out.close();
+                } catch (FileNotFoundException e) {
+                    return getString(R.string.error_restore_title, e.getMessage());
+                } catch (IOException e) {
+                    return getString(R.string.error_restore_title, e.getMessage());
                 }
                 // Return an empty String as success
                 return "";
@@ -173,16 +211,13 @@ public class RestoreService extends Service {
 
             @Override
             protected void onPostExecute(String result) {
-                // Release the database lock
+                // Release the database lock and set the restore completed flag
                 DatabaseLock.release(RestoreService.this, DatabaseLock.RESTORE);
+                mRestoreCompleted = true;
                 // Inform any listeners that the database is restored
-                if (TextUtils.isEmpty(result)) {
-                    callOnRestoreListeners(true, null);
-                } else {
-                    callOnRestoreListeners(false, result);
-                }
+                callOnRestoreListeners(TextUtils.isEmpty(result), result);
             }
 
-        }.execute(restoreFromUri);
+        }.execute(restoreFromUri, targetUri);
     }
 }
