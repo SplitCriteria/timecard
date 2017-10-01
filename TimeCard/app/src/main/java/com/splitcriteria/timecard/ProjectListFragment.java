@@ -25,6 +25,27 @@ import android.view.ViewGroup;
 import android.widget.TextView;
 
 /**
+ * Timecard - Allows users to easily track time-based data for analysis.
+ * Copyright (C) 2017  Nicholas Johnson
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ * Timecard - Copyright (C) 2017  Nicholas Johnson
+ *
+ * This program comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+ * This is free software, and you are welcome to redistribute it
+ * under certain conditions; type `show c' for details.
+ *
  * Holds a list of the projects. The hosting Activity can show either archived or
  * non-archived projects. The user can swipe left and right to archive, delete, and
  * un-archive projects. This class, when opened, attempts to schedule a backup job
