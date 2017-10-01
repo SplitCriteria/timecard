@@ -5,11 +5,12 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 
+/**
+ * Activity which contains an EditFragment
+ */
 public class EditActivity extends AppCompatActivity {
 
     private static final String TAG_EDIT_FRAGMENT = "com.splitcriteria.timecard.EDIT_FRAGMENT";
-
-    private EditFragment mEditFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -18,12 +19,13 @@ public class EditActivity extends AppCompatActivity {
 
         FragmentManager fragmentManager = getFragmentManager();
 
-        mEditFragment = (EditFragment)fragmentManager.findFragmentByTag(TAG_EDIT_FRAGMENT);
-        if (mEditFragment == null) {
+        EditFragment editFragment = (EditFragment)fragmentManager
+                .findFragmentByTag(TAG_EDIT_FRAGMENT);
+        if (editFragment == null) {
             String projectName = getIntent().getStringExtra(Intent.EXTRA_TEXT);
-            mEditFragment = EditFragment.createEditFragment(projectName);
+            editFragment = EditFragment.createEditFragment(projectName);
             fragmentManager.beginTransaction()
-                           .add(R.id.container, mEditFragment, TAG_EDIT_FRAGMENT)
+                           .add(R.id.container, editFragment, TAG_EDIT_FRAGMENT)
                            .commit();
         }
     }

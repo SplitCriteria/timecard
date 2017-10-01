@@ -11,6 +11,7 @@ import android.os.AsyncTask;
 import android.preference.PreferenceManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -21,11 +22,15 @@ import java.io.OutputStream;
 import java.net.URL;
 
 /**
- * Created by Deuce on 9/20/17.
+ * Provides a Service which backs up the user database to a user-specified location.
+ * This service is a JobService and can be scheduled as well as started by calling
+ * startService()
  */
 
 @TargetApi(24)
 public class BackupService extends JobService {
+
+    private static final String TAG = "BackupService";
 
     private boolean mBackingUp = false;
 
@@ -105,7 +110,7 @@ public class BackupService extends JobService {
                     in.close();
                     out.close();
                 } catch (IOException exception) {
-                    return exception.toString();
+                    return getString(R.string.error_backup_title, exception.getMessage());
                 }
                 // Return the number of bytes written on success
                 return Integer.toString(bytesWritten);
@@ -117,12 +122,14 @@ public class BackupService extends JobService {
                 int bytesWritten;
                 try {
                     bytesWritten = Integer.parseInt(result);
-                    // TODO Log backup success
-                    Log.d("Backup", "Successful backup: wrote " + bytesWritten + " bytes");
+                    // If an integer is passed, then let the user know of a successful backup
+                    Toast.makeText(BackupService.this,
+                                   R.string.toast_backup_success,
+                                   Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "Successful backup: wrote " + bytesWritten + " bytes");
                 } catch (NumberFormatException exception) {
                     // Results which are not numbers are errors
-                    // TODO Log backup error somewhere for the user to see
-                    Log.e("Backup Error", result);
+                    Log.e(TAG, result);
                 } finally {
                     // Release the database lock
                     DatabaseLock.release(BackupService.this, DatabaseLock.BACKUP);

@@ -24,6 +24,12 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
+/**
+ * Holds a list of the projects. The hosting Activity can show either archived or
+ * non-archived projects. The user can swipe left and right to archive, delete, and
+ * un-archive projects. This class, when opened, attempts to schedule a backup job
+ * if it currently doesn't exist.
+ */
 public class ProjectListFragment extends ResultFragment implements
         ResultFragment.OnResultListener {
 
@@ -291,15 +297,17 @@ public class ProjectListFragment extends ResultFragment implements
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             JobScheduler jobScheduler = (JobScheduler) getActivity().getSystemService(
                     Context.JOB_SCHEDULER_SERVICE);
+            // See if the job information already exists
             JobInfo jobInfo = jobScheduler.getPendingJob(JOB_ID_BACKUP_SERVICE);
             if (jobInfo == null) {
+                // If it doesn't, then create it now
                 JobInfo.Builder jobBuilder = new JobInfo.Builder(
                         JOB_ID_BACKUP_SERVICE,
                         new ComponentName(getActivity().getPackageName(),
                                           BackupService.class.getName()));
                 jobInfo = jobBuilder.setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
                                     .setPeriodic(BACKUP_PERIOD)
-                                    //TODO .setPersisted(true)
+                                    .setPersisted(true)
                                     .setRequiresCharging(true)
                                     .build();
                 int result = jobScheduler.schedule(jobInfo);

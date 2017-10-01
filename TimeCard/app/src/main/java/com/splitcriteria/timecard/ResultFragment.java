@@ -10,6 +10,7 @@ import android.os.Bundle;
  * a set request code and a bundle of extras which can be retrieved by calling
  * Intent.getBundleExtra(EXTRA_BUNDLE)
  */
+
 public abstract class ResultFragment extends DialogFragment {
 
     static final String EXTRA_BUNDLE = "com.splitcriteria.timecard.EXTRA_BUNDLE";

@@ -16,7 +16,7 @@ import android.view.ViewGroup;
 import java.util.Calendar;
 
 /**
- * Created by Deuce on 9/28/17.
+ * A Fragment which allows a user to edit data contained in the ProjectData project
  */
 
 public class EditFragment extends ResultFragment implements

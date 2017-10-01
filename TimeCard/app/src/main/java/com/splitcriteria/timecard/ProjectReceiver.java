@@ -17,7 +17,9 @@ import java.util.Date;
 import java.util.Locale;
 
 /**
- * Created by Deuce on 9/14/17.
+ * A receiver which clocks in/out projects and controls posting and dismissing
+ * notifications which allow the user to continue controlling their projects
+ * Use the ProjectReceiver.IntentBuilder to build an Intent or PendingIntent.
  */
 
 public class ProjectReceiver extends BroadcastReceiver {
@@ -33,11 +35,16 @@ public class ProjectReceiver extends BroadcastReceiver {
     static final String ACTION_DISMISS = ACTION_ROOT + "DISMISS";
     static final String ACTION_DISMISS_STICKY = ACTION_ROOT + "DISMISS_STICKY";
 
-    static final String KEY_FROM_STICKY = "from_stick";
+    static final String KEY_FROM_STICKY = "from_sticky";
     static final String KEY_SUPPRESS_NOTIFICATION = "suppress_notification";
     static final String KEY_SUPPRESS_TOAST = "suppress_toast";
     static final String KEY_EXTRA_DATA = "extra_data";
 
+    /**
+     * Convenience class for building an Intent or PendingIntent which contains
+     * an action (e.g. ACTION_CLOCK_IN, ACTION_POST_STICKY) and other amplifying
+     * information (e.g. flags to suppress a Toast notification, include Extra Data).
+     */
     static class IntentBuilder {
         private Intent mIntent;
         private Context mContext;
@@ -93,75 +100,84 @@ public class ProjectReceiver extends BroadcastReceiver {
         }
         String databaseFilename = context.getString(R.string.default_database_filename);
         // Handle the intent actions
-        if (action.equals(ACTION_CLOCK_IN)) {
-            // Get any extra data associated with clocking in
-            String extraData = intent.getStringExtra(KEY_EXTRA_DATA);
-            // If this intent was from a remote input (i.e. a notification) then
-            // override the extraData with the RemoteInput data
-            String remoteData = getRemoteData(intent);
-            boolean hasRemoteData = remoteData != null;
-            // Clock the project in
-            ProjectData pd = new ProjectData(context, databaseFilename);
-            pd.clockIn(projectName, hasRemoteData ? remoteData : extraData);
-            ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
-            pd.close(context);
-            // If no extra data is given, check for default data
-            if (metadata.usesExtraData && TextUtils.isEmpty(extraData)) {
-                extraData = metadata.defaultExtraData;
+        switch (action) {
+            case ACTION_CLOCK_IN: {
+                // Get any extra data associated with clocking in
+                String extraData = intent.getStringExtra(KEY_EXTRA_DATA);
+                // If this intent was from a remote input (i.e. a notification) then
+                // override the extraData with the RemoteInput data
+                String remoteData = getRemoteData(intent);
+                boolean hasRemoteData = remoteData != null;
+                // Clock the project in
+                ProjectData pd = new ProjectData(context, databaseFilename);
+                pd.clockIn(projectName, hasRemoteData ? remoteData : extraData);
+                ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
+                pd.close(context);
+                // If no extra data is given, check for default data
+                if (metadata.usesExtraData && TextUtils.isEmpty(extraData)) {
+                    extraData = metadata.defaultExtraData;
+                }
+                if (!suppressToast && !hasRemoteData) {
+                    Toast.makeText(
+                            context,
+                            context.getString(metadata.noDuration ?
+                                            R.string.broadcast_clock_in_instant :
+                                            R.string.broadcast_clock_in,
+                                    context.getString(R.string.app_name),
+                                    projectName),
+                            Toast.LENGTH_LONG).show();
+                }
+                // If the data came from a notification, then reply to it
+                if (intent.getBooleanExtra(KEY_FROM_STICKY, false)) {
+                    postStickyNotification(context, projectName,
+                            getStickyNotificationMessage(context, metadata,
+                                    hasRemoteData ? remoteData : extraData, -1));
+                } else if (!metadata.noDuration
+                        && !intent.getBooleanExtra(KEY_SUPPRESS_NOTIFICATION, false)) {
+                    // Post a clock out notification if this project is not "instant"
+                    postNotification(context, projectName);
+                }
+                break;
             }
-            if (!suppressToast && !hasRemoteData) {
-                Toast.makeText(
-                        context,
-                        context.getString(metadata.noDuration ?
-                                                R.string.broadcast_clock_in_instant :
-                                                R.string.broadcast_clock_in,
-                                          context.getString(R.string.app_name),
-                                          projectName),
-                        Toast.LENGTH_LONG).show();
+            case ACTION_CLOCK_OUT: {
+                ProjectData pd = new ProjectData(context, databaseFilename);
+                int duration = pd.clockOut(projectName);
+                ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
+                pd.close(context);
+                if (intent.getBooleanExtra(KEY_FROM_STICKY, false)) {
+                    postStickyNotification(context, projectName,
+                            getStickyNotificationMessage(context, metadata, null, duration));
+                } else {
+                    dismissNotification(context, projectName);
+                }
+                if (!suppressToast) {
+                    Toast.makeText(
+                            context,
+                            context.getString(R.string.broadcast_clock_out,
+                                    context.getString(R.string.app_name),
+                                    projectName),
+                            Toast.LENGTH_LONG).show();
+                }
+                break;
             }
-            // If the data came from a notification, then reply to it
-            if (intent.getBooleanExtra(KEY_FROM_STICKY, false)) {
-                postStickyNotification(context, projectName,
-                        getStickyNotificationMessage(context, metadata,
-                                hasRemoteData ? remoteData : extraData, -1));
-            } else if (!metadata.noDuration
-                    && !intent.getBooleanExtra(KEY_SUPPRESS_NOTIFICATION, false)) {
-                // Post a clock out notification if this project is not "instant"
-                postNotification(context, projectName);
-            }
-        } else if (action.equals(ACTION_CLOCK_OUT)) {
-            ProjectData pd = new ProjectData(context, databaseFilename);
-            int duration = pd.clockOut(projectName);
-            ProjectData.Metadata metadata = pd.getProjectMetadata(projectName);
-            pd.close(context);
-            if (intent.getBooleanExtra(KEY_FROM_STICKY, false)) {
-                postStickyNotification(context, projectName,
-                        getStickyNotificationMessage(context, metadata, null, duration));
-            } else {
+            case ACTION_DISMISS:
                 dismissNotification(context, projectName);
+                break;
+            case ACTION_POST_STICKY: {
+                ProjectData projectData = new ProjectData(context, databaseFilename);
+                ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
+                projectData.close(context);
+                int messageID = metadata.noDuration ?
+                        R.string.notification_sticky_mark_time_instructions :
+                        metadata.currentTimecard == -1 ?
+                                R.string.notification_sticky_clock_in_instructions :
+                                R.string.notification_sticky_clock_out_instructions;
+                postStickyNotification(context, projectName, context.getString(messageID));
+                break;
             }
-            if (!suppressToast) {
-                Toast.makeText(
-                        context,
-                        context.getString(R.string.broadcast_clock_out,
-                                context.getString(R.string.app_name),
-                                projectName),
-                        Toast.LENGTH_LONG).show();
-            }
-        } else if (action.equals(ACTION_DISMISS)) {
-            dismissNotification(context, projectName);
-        } else if (action.equals(ACTION_POST_STICKY)) {
-            ProjectData projectData = new ProjectData(context, databaseFilename);
-            ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
-            projectData.close(context);
-            int messageID = metadata.noDuration ?
-                    R.string.notification_sticky_mark_time_instructions :
-                    metadata.currentTimecard == -1 ?
-                            R.string.notification_sticky_clock_in_instructions :
-                            R.string.notification_sticky_clock_out_instructions;
-            postStickyNotification(context, projectName, context.getString(messageID));
-        } else if (action.equals(ACTION_DISMISS_STICKY)) {
-            dismissStickyNotification(context, projectName);
+            case ACTION_DISMISS_STICKY:
+                dismissStickyNotification(context, projectName);
+                break;
         }
     }
 

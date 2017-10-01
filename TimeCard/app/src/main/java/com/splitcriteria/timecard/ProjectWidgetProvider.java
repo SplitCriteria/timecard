@@ -10,10 +10,12 @@ import android.text.TextUtils;
 import android.widget.RemoteViews;
 
 /**
- * Created by Deuce on 9/14/17.
+ * Controls the update of the app's widgets. When clicked, the widget will toggle the
+ * clock in/out of a project.
  */
 
 public class ProjectWidgetProvider extends AppWidgetProvider {
+
     @Override
     public void onUpdate(Context context, AppWidgetManager appWidgetManager, int[] appWidgetIds) {
         for (int id : appWidgetIds) {

@@ -25,6 +25,10 @@ import java.io.BufferedOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
+/**
+ * Activity which contains an overview of a specific project, its settings,
+ * and allows the user to perform common actions on the project.
+ */
 public class ProjectActivity extends AppCompatActivity implements
         View.OnClickListener,
         ResultFragment.OnResultListener {
@@ -221,12 +225,16 @@ public class ProjectActivity extends AppCompatActivity implements
                     protected Boolean doInBackground(Uri... uri) {
                         boolean isError;
                         try {
-                            OutputStream os = new BufferedOutputStream(
-                                    getContentResolver().openOutputStream(uri[0], "w"));
-                            ProjectData projectData = new ProjectData(getApplicationContext());
-                            isError = !projectData.dumpToCSV(mProjectName, os);
-                            projectData.close(getApplicationContext());
-                            os.close();
+                            OutputStream os = getContentResolver().openOutputStream(uri[0], "w");
+                            if (os == null) {
+                                isError = true;
+                            } else {
+                                os = new BufferedOutputStream(os);
+                                ProjectData projectData = new ProjectData(getApplicationContext());
+                                isError = !projectData.dumpToCSV(mProjectName, os);
+                                projectData.close(getApplicationContext());
+                                os.close();
+                            }
                         } catch (IOException exception) {
                             isError = true;
                         }

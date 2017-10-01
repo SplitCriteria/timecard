@@ -11,7 +11,8 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 /**
- * Created by Deuce on 9/14/17.
+ * Provides an activity to setup a Widget which controls the clocking in/out of
+ * a specific project
  */
 
 public class ProjectWidgetSetupActivity extends AppCompatActivity implements

@@ -24,7 +24,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Deuce on 9/30/17.
+ * A bound Service which Restores a database from a user or client-specified location.
+ * IBinder provides interaction methods and the ability to add a OnRestoredListener
+ * which will be called when the restoration is complete.
  */
 
 public class RestoreService extends Service {

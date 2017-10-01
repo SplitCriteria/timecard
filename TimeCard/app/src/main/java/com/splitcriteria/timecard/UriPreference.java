@@ -5,7 +5,8 @@ import android.net.Uri;
 import android.util.AttributeSet;
 
 /**
- * Created by Deuce on 9/30/17.
+ * A simple implementation of ClickPreference which allows a client to
+ * persist a Uri (held in a String)
  */
 
 public class UriPreference extends ClickPreference {
@@ -22,11 +23,11 @@ public class UriPreference extends ClickPreference {
         super(context);
     }
 
-    public void setUri(Uri uri) {
+    void setUri(Uri uri) {
         persistString(uri.toString());
     }
 
-    public Uri getUri() {
+    Uri getUri() {
         return Uri.parse(getPersistedString(""));
     }
 }

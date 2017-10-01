@@ -3,7 +3,6 @@ package com.splitcriteria.timecard;
 import android.app.Activity;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.app.TimePickerDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -17,11 +16,11 @@ import android.widget.EditText;
 import android.widget.TimePicker;
 
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Locale;
 
 /**
- * Created by Deuce on 9/23/17.
+ * Provides template DialogFragment's which inherit from ResultFragment which
+ * provides common use cases.
  */
 
 public class Dialogs {

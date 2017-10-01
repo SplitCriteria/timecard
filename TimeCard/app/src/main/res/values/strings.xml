@@ -119,4 +119,5 @@
     <string name="default_database_filename">projects.db</string>
 
     <string name="toast_restore_success">Database restored!</string>
+    <string name="toast_backup_success">Timecard data backed up</string>
 </resources>

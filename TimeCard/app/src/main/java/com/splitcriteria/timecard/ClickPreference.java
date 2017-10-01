@@ -1,16 +1,15 @@
 package com.splitcriteria.timecard;
 
 import android.content.Context;
-import android.net.Uri;
 import android.preference.Preference;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by Deuce on 9/29/17.
+ * Provides a generic Preference object which contains an OnClickListener interface
+ * which is called when the preference is clicked
  */
 
 class ClickPreference extends Preference {

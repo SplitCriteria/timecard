@@ -13,7 +13,8 @@ import java.util.Comparator;
 import java.util.List;
 
 /**
- * Created by Deuce on 9/9/17.
+ * A RecyclerView.Adapter which holds project names and displays them using
+ * the card_project layout.
  */
 
 class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {

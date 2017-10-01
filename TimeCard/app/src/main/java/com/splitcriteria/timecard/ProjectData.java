@@ -11,19 +11,19 @@ import android.util.ArrayMap;
 
 import java.io.IOException;
 import java.io.OutputStream;
-import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.HashMap;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Date;
 
 /**
- * Created by Deuce on 9/9/17.
+ * Contains methods for access project data which is backed by an SQLite database.
+ * Because this class reserves the database resource using DatabaseLock, the client
+ * should use close(Context) immediately after finished using the methods within.
  */
 
 class ProjectData {
@@ -547,6 +547,7 @@ class ProjectData {
                 while (cursor.moveToNext()) {
                     timeInSeconds += cursor.getInt(timeIndex);
                 }
+                cursor.close();
                 return timeInSeconds;
             } else {
                 // Project is not clocked in -- must be clocked in first

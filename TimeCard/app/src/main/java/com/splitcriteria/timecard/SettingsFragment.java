@@ -19,7 +19,8 @@ import android.widget.Toast;
 import java.util.List;
 
 /**
- * Created by Deuce on 9/29/17.
+ * A PreferenceFragment which allows the user to change application-wide
+ * preferences and backup and restore the data in this app
  */
 
 public class SettingsFragment extends PreferenceFragment implements

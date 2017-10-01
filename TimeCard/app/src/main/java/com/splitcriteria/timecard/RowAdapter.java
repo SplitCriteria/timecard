@@ -1,9 +1,7 @@
 package com.splitcriteria.timecard;
 
-import android.support.constraint.ConstraintLayout;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
-import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,7 +14,9 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Created by Deuce on 9/9/17.
+ * An Adapter which inherits from RecyclerView.Adapter and holds ProjectData.Row
+ * This adapter provides a method to remove an item from the adapter, which is then
+ * held in reserve in case the client wants to unremove it.
  */
 
 class RowAdapter extends RecyclerView.Adapter<RowAdapter.ViewHolder> implements

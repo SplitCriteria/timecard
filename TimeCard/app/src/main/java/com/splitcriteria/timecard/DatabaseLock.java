@@ -3,10 +3,12 @@ package com.splitcriteria.timecard;
 import android.content.Context;
 
 /**
- * Created by Deuce on 9/30/17.
+ * Provides a customized PersistentSemaphore which specifically targets
+ * Timecard database and the clients which exclusively use it (i.e. RestoreService,
+ * BackupService, and ProjectData)
  */
 
-public class DatabaseLock {
+class DatabaseLock {
 
     private static final String KEY = "database.semaphore";
 

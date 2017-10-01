@@ -8,10 +8,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
-import java.nio.charset.Charset;
 
 /**
- * Created by Deuce on 9/30/17.
+ * This class provides a file-backed semaphore which is persistent and saved
+ * in an Android app's default directory. Clients, which are identified by an ID
+ * String, can acquire permits to use a common resource, then release them when
+ * they are finished.
  */
 
 class PersistentSemaphore {
@@ -30,7 +32,7 @@ class PersistentSemaphore {
      * @return  -1 if the unable to acquire permits, 0 if no permits are acquired but are
      *          available, or an integer > 0 showing the number of permits acquired by "id"
      */
-    synchronized int getPermitsAcquired(String key, String id) {
+    private synchronized int getPermitsAcquired(String key, String id) {
         // Get the Context
         Context context = mContext.get();
         if (context == null) {
