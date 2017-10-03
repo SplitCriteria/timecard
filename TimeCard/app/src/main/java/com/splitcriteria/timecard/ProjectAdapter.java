@@ -3,9 +3,12 @@ package com.splitcriteria.timecard;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
+import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.TextView;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,9 +41,16 @@ import java.util.List;
  * the card_project layout.
  */
 
-class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
+class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> implements
+        View.OnClickListener {
+
+    interface OnProjectClickedListener {
+        void onClockInOutClicked(String projectName);
+        void onSettingsClicked(String projectName);
+    }
 
     private List<String> mProjects = new ArrayList<>();
+    private List<OnProjectClickedListener> mListeners = new ArrayList<>();
     private Comparator<String> mIgnoreCaseStringComparator = new Comparator<String>() {
         @Override
         public int compare(String s, String t1) {
@@ -50,9 +60,17 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         CardView mCardView;
+        TextView mProjectName;
+        Button mClockInOut;
+        TextView mSummary;
+        Button mSettings;
         ViewHolder(CardView v) {
             super(v);
             mCardView = v;
+            mProjectName = v.findViewById(R.id.name);
+            mClockInOut = v.findViewById(R.id.project_clock_in_out);
+            mSummary = v.findViewById(R.id.data_summary);
+            mSettings = v.findViewById(R.id.project_settings);
         }
     }
 
@@ -72,8 +90,12 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        ((TextView)holder.mCardView.findViewById(R.id.name))
-                .setText(mProjects.get(position));
+        String projectName = mProjects.get(position);
+        holder.mProjectName.setText(projectName);
+        holder.mClockInOut.setOnClickListener(this);
+        holder.mClockInOut.setTag(R.id.project_name, projectName);
+        holder.mSettings.setOnClickListener(this);
+        holder.mSettings.setTag(R.id.project_name, projectName);
     }
 
     @Override
@@ -101,4 +123,28 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> {
         notifyItemInserted(position);
     }
 
+    @Override
+    public void onClick(View view) {
+        String projectName = (String)view.getTag(R.id.project_name);
+        int id = view.getId();
+        if (id == R.id.project_clock_in_out) {
+            for (OnProjectClickedListener listener : mListeners) {
+                listener.onClockInOutClicked(projectName);
+            }
+        } else if (id == R.id.project_settings) {
+            for (OnProjectClickedListener listener : mListeners) {
+                listener.onSettingsClicked(projectName);
+            }
+        }
+    }
+
+    void addOnProjectClickedListener(OnProjectClickedListener listener) {
+        if (!mListeners.contains(listener)) {
+            mListeners.add(listener);
+        }
+    }
+
+    void removeOnProjectClickedListener(OnProjectClickedListener listener) {
+        mListeners.remove(listener);
+    }
 }

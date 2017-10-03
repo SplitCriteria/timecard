@@ -23,6 +23,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
+import android.widget.Toast;
 
 /**
  * Timecard - Allows users to easily track time-based data for analysis.
@@ -52,15 +53,20 @@ import android.widget.TextView;
  * if it currently doesn't exist.
  */
 public class ProjectListFragment extends ResultFragment implements
-        ResultFragment.OnResultListener {
+        ResultFragment.OnResultListener,
+        ProjectAdapter.OnProjectClickedListener {
 
     private static final String TAG_DIALOG_CREATE_PROJECT = "dialog_project";
     private static final String TAG_DIALOG_SIMPLE_MESSAGE = "simple_message";
+    private static final String TAG_DIALOG_GET_EXTRA_DATA = "get_extra_data";
 
     private static final int MILLISECONDS_PER_DAY = 86400000;
     private static final int BACKUP_PERIOD = MILLISECONDS_PER_DAY;
 
+    private static final int REQUEST_GET_EXTRA_DATA = 0;
     private static final int REQUEST_CODE_CREATE_PROJECT = 1;
+
+    private static final String KEY_PROJECT_NAME = "project_name";
 
     private RecyclerView mRecyclerView;
     private ProjectAdapter mAdapter;
@@ -99,14 +105,14 @@ public class ProjectListFragment extends ResultFragment implements
             }
         });
 
-        // Add a OnItemTouchListener to collect information for the GestureDetector
-        mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
-            @Override
-            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
-                mGestures.onTouchEvent(e);
-                return super.onInterceptTouchEvent(rv, e);
-            }
-        });
+//        // Add a OnItemTouchListener to collect information for the GestureDetector
+//        mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
+//            @Override
+//            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
+//                mGestures.onTouchEvent(e);
+//                return super.onInterceptTouchEvent(rv, e);
+//            }
+//        });
 
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)
@@ -230,6 +236,18 @@ public class ProjectListFragment extends ResultFragment implements
         return root;
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        mAdapter.addOnProjectClickedListener(this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mAdapter.removeOnProjectClickedListener(this);
+    }
+
     private void refreshProjectNames() {
         ProjectData projectData = new ProjectData(getActivity());
         mAdapter = new ProjectAdapter(projectData.getProjectNames(mShowingArchived));
@@ -275,6 +293,55 @@ public class ProjectListFragment extends ResultFragment implements
     }
 
     @Override
+    public void onClockInOutClicked(String projectName) {
+        ProjectData projectData = new ProjectData(getActivity());
+        ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
+        // Check to see if there is supposed to be extra data
+        if (metadata.usesExtraData && TextUtils.isEmpty(metadata.defaultExtraData)) {
+            // Get the extra data from the user
+            Bundle extras = new Bundle();
+            // Add the project name to the dialog to receive it in the onResult method
+            extras.putString(KEY_PROJECT_NAME, projectName);
+            Dialogs.UserInputDialogFragment.createUserInputDialog(
+                    getString(R.string.dialog_get_extra_data_title), null,
+                    R.string.dialog_get_extra_data_positive_button, null)
+                    .setOnResultListener(this)
+                    .setRequestCode(REQUEST_GET_EXTRA_DATA)
+                    .putExtras(extras)
+                    .show(getFragmentManager(), TAG_DIALOG_GET_EXTRA_DATA);
+        } else {
+            // Clock in/out the project
+            boolean isClockedIn = projectData.isClockedIn(projectName);
+            ProjectReceiver.IntentBuilder intentBuilder = new ProjectReceiver
+                    .IntentBuilder(getActivity(), projectName)
+                    .setAction(isClockedIn ? ProjectReceiver.ACTION_CLOCK_OUT :
+                                             ProjectReceiver.ACTION_CLOCK_IN)
+                    .setSuppressToast(true);
+            // If this project uses extra data, then add it now
+            if (metadata.usesExtraData) {
+                intentBuilder.setExtraData(metadata.defaultExtraData);
+            }
+            // Send a broadcast which actually clocks in/out the project
+            getActivity().sendBroadcast(intentBuilder.build());
+            // Use a Snackbar to notify the user
+            Snackbar.make(mRecyclerView, getString(
+                    metadata.noDuration ? R.string.project_clocked_in_instant :
+                                          isClockedIn ? R.string.project_clocked_out :
+                                                        R.string.project_clocked_in, projectName),
+                    Snackbar.LENGTH_SHORT).show();
+            // TODO change the button symbology
+        }
+        projectData.close(getActivity());
+    }
+
+    @Override
+    public void onSettingsClicked(String projectName) {
+        Intent projectIntent = new Intent(getActivity(), ProjectSettingsActivity.class);
+        projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
+        startActivity(projectIntent);
+    }
+
+    @Override
     public void onResult(int requestCode, int resultCode, Intent intent) {
         if (requestCode == REQUEST_CODE_CREATE_PROJECT && resultCode == Activity.RESULT_OK) {
             String projectName = intent.getExtras()
@@ -310,6 +377,32 @@ public class ProjectListFragment extends ResultFragment implements
                 }
                 projectData.close(activity);
             }
+        } else if (requestCode == REQUEST_GET_EXTRA_DATA && resultCode == Activity.RESULT_OK) {
+            // Get the project name from the extras
+            Bundle extras = intent.getBundleExtra(ResultFragment.EXTRA_BUNDLE);
+            String projectName = extras.getString(KEY_PROJECT_NAME);
+            // Clock in/out the project
+            ProjectData projectData = new ProjectData(getActivity());
+            ProjectData.Metadata metadata = projectData.getProjectMetadata(projectName);
+            boolean isClockedIn = projectData.isClockedIn(projectName);
+            projectData.close(getActivity());
+            ProjectReceiver.IntentBuilder intentBuilder = new ProjectReceiver
+                    .IntentBuilder(getActivity(), projectName)
+                    .setAction(isClockedIn ? ProjectReceiver.ACTION_CLOCK_OUT :
+                                             ProjectReceiver.ACTION_CLOCK_IN)
+                    .setExtraData(intent.getStringExtra(
+                            Dialogs.UserInputDialogFragment.KEY_USER_INPUT))
+                    .setSuppressToast(true);
+            // Send a broadcast which actually clocks in/out the project
+            getActivity().sendBroadcast(intentBuilder.build());
+            // Use a Snackbar to notify the user
+            Snackbar.make(mRecyclerView, getString(
+                    metadata.noDuration ? R.string.project_clocked_in_instant :
+                                          isClockedIn ? R.string.project_clocked_out :
+                                                        R.string.project_clocked_in, projectName),
+                    Snackbar.LENGTH_SHORT).show();
+            // TODO change the button symbology
+            // TODO combine this code with the one above to reduce
         }
     }
 

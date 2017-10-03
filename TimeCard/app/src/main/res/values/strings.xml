@@ -20,9 +20,9 @@
     <string name="error_create">Error creating project \'%1$s\'</string>
 
     <string name="project_created">Project Created</string>
-    <string name="project_clocked_in">Clocked In</string>
-    <string name="project_clocked_out">Clocked Out</string>
-    <string name="project_clocked_in_instant">Time Marked</string>
+    <string name="project_clocked_in">Clocked In: %1$s</string>
+    <string name="project_clocked_out">Clocked Out: %1$s</string>
+    <string name="project_clocked_in_instant">Time Marked: %1$s</string>
     <string name="project_archived">Project \'%1$s\' archived</string>
     <string name="project_unarchived">Project \'%1$s\' un-archived</string>
     <string name="project_deleted">Project \'%1$s\' deleted!</string>
@@ -114,6 +114,38 @@
     <string name="preferences_title_restore_alt">Restore Alternate</string>
     <string name="preferences_description_restore_alt">Choose an alternate backup to restore</string>
     <string name="preferences_key_restore_alt">restore_alt</string>
+    <string name="preferences_project_options">Options</string>
+    <string name="preferences_project_instant_title">Instant</string>
+    <string name="preferences_project_instant_description">When enabled, project time frames are instantaneous (start and end time are the same)</string>
+    <string name="preferences_project_instant_key">instant</string>
+    <string name="preferences_project_location_title">Track Location</string>
+    <string name="preferences_project_location_description">When enabled, location data is added for the duration of when this project is clocked in</string>
+    <string name="preferences_project_location_key">track_location</string>
+    <string name="preferences_project_extra_data_title">Extra Data</string>
+    <string name="preferences_project_extra_data_description">When enabled, the default extra data is added to each project or user is prompted</string>
+    <string name="preferences_project_extra_data_key">extra_data</string>
+    <string name="preferences_project_default_extra_title">Default Extra Data</string>
+    <string name="preferences_project_default_extra_description">Click to add default extra data</string>
+    <string name="preferences_project_default_extra_set_description">%1$s</string>
+    <string name="preferences_project_default_extra_key">default_extra_data</string>
+    <string name="preferences_project_default_extra_dialog_title">Default Extra Data</string>
+    <string name="preferences_project_default_extra_dialog_message">Enter default extra data to be applied to this project.</string>
+    <string name="preferences_project_summary_title">Summary Method</string>
+    <string name="preferences_project_summary_description">Data summarized by: %1$s</string>
+    <string name="preferences_project_summary_key">summarize_method</string>
+    <string-array name="preferences_summary_types">
+        <item>Auto</item>
+        <item>Total Time</item>
+        <item>Average Time</item>
+        <item>Average Extra Data</item>
+    </string-array>
+    <string-array name="preferences_summary_type_values">
+        <item>auto</item>
+        <item>total_time</item>
+        <item>average_time</item>
+        <item>average_extra_data</item>
+    </string-array>
+    <string name="preferences_summary_type_default_value">auto</string>
 
     <string name="default_backup_filename">Timecard_backup.db</string>
     <string name="default_database_filename">projects.db</string>

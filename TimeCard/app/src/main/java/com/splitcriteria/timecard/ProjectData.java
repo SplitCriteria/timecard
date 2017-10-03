@@ -52,7 +52,7 @@ class ProjectData {
     private ProjectDataOpenHelper mDBHelper;
     private SQLiteDatabase mDatabase;
 
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     // Projects metadata table name and column names
     private static final String PROJECTS_TABLE = "projects";
     private static final String KEY_PROJECT_NAME = "name";
@@ -61,6 +61,7 @@ class ProjectData {
     private static final String KEY_NO_DURATION = "no_duration";
     private static final String KEY_USES_EXTRA_DATA = "use_extra";
     private static final String KEY_DEFAULT_EXTRA_DATA = "default_extra";
+    private static final String KEY_DATA_SUMMARY_METHOD = "data_summary_method";
     private static final String KEY_CURRENT_TIMECARD = "current_timecard_row";
     // Project timecard table column names
     private static final String KEY_START_TIME = "start";
@@ -76,6 +77,7 @@ class ProjectData {
         boolean usesExtraData;
         String defaultExtraData;
         int currentTimecard;
+        String dataSummaryMethod;
     }
 
     class Row {
@@ -105,8 +107,8 @@ class ProjectData {
 
         @Override
         public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-            sqLiteDatabase.execSQL("DROP TABLE IF EXISTS " + PROJECTS_TABLE + ";");
-            onCreate(sqLiteDatabase);
+            sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                                    KEY_DATA_SUMMARY_METHOD + " DEFAULT 'auto';");
         }
     }
 
@@ -141,6 +143,7 @@ class ProjectData {
         int usesExtraDataIndex = cursor.getColumnIndex(KEY_USES_EXTRA_DATA);
         int defaultExtraDataIndex = cursor.getColumnIndex(KEY_DEFAULT_EXTRA_DATA);
         int noDurationIndex = cursor.getColumnIndex(KEY_NO_DURATION);
+        int dataSummaryIndex = cursor.getColumnIndex(KEY_DATA_SUMMARY_METHOD);
         while (cursor.moveToNext()) {
             Metadata metadata = new Metadata();
             metadata.archived = cursor.getInt(archivedIndex) != 0;
@@ -149,6 +152,7 @@ class ProjectData {
             metadata.usesExtraData = cursor.getInt(usesExtraDataIndex) != 0;
             metadata.defaultExtraData = cursor.getString(defaultExtraDataIndex);
             metadata.noDuration = cursor.getInt(noDurationIndex) != 0;
+            metadata.dataSummaryMethod = cursor.getString(dataSummaryIndex);
             results.put(cursor.getString(nameIndex), metadata);
         }
         cursor.close();
@@ -266,6 +270,9 @@ class ProjectData {
             }
             if (prevMetadata.trackLocation != newMetadata.trackLocation) {
                 setMetadataValue(project, KEY_TRACK_LOCATION, newMetadata.trackLocation);
+            }
+            if (!prevMetadata.dataSummaryMethod.equals(newMetadata.dataSummaryMethod)) {
+                setMetadataValue(project, KEY_DATA_SUMMARY_METHOD, newMetadata.dataSummaryMethod);
             }
             return true;
         } else {

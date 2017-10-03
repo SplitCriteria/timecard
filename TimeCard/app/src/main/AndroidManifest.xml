@@ -29,6 +29,14 @@
                 android:value=".MainActivity" />
         </activity>
         <activity
+            android:name=".ProjectSettingsActivity"
+            android:parentActivityName=".MainActivity"
+            android:launchMode="singleTop" >
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+        <activity
             android:name=".ProjectActivity"
             android:parentActivityName=".MainActivity"
             android:launchMode="singleTop" >

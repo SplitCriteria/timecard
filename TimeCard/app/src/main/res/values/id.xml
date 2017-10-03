@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item type="id" name="edit_cell_position" />
+    <item type="id" name="project_name" />
 </resources>
