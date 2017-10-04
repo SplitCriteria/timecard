@@ -8,6 +8,8 @@ import android.app.job.JobScheduler;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -19,11 +21,18 @@ import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import java.io.BufferedOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Timecard - Allows users to easily track time-based data for analysis.
@@ -54,7 +63,9 @@ import android.widget.Toast;
  */
 public class ProjectListFragment extends ResultFragment implements
         ResultFragment.OnResultListener,
-        ProjectAdapter.OnProjectClickedListener {
+        ProjectAdapter.OnProjectClickedListener,
+        PopupMenu.OnDismissListener,
+        PopupMenu.OnMenuItemClickListener {
 
     private static final String TAG_DIALOG_CREATE_PROJECT = "dialog_project";
     private static final String TAG_DIALOG_SIMPLE_MESSAGE = "simple_message";
@@ -65,6 +76,7 @@ public class ProjectListFragment extends ResultFragment implements
 
     private static final int REQUEST_GET_EXTRA_DATA = 0;
     private static final int REQUEST_CODE_CREATE_PROJECT = 1;
+    private static final int REQUEST_CODE_CREATE_DOCUMENT = 2;
 
     private static final String KEY_PROJECT_NAME = "project_name";
 
@@ -74,6 +86,7 @@ public class ProjectListFragment extends ResultFragment implements
     private boolean mShowingArchived = false;
     private ItemTouchHelper mCurrentProjectsItemTouchHelper;
     private ItemTouchHelper mArchivedProjectsItemTouchHelper;
+    private String mSelectedProjectName;
 
     private static final int JOB_ID_BACKUP_SERVICE = 1;
 
@@ -89,21 +102,21 @@ public class ProjectListFragment extends ResultFragment implements
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
 
-        // Set up the gesture detector to open the ProjectActivity on a user click
-        mGestures = new GestureDetectorCompat(getActivity(), new GestureDetector.SimpleOnGestureListener() {
-            @Override
-            public boolean onSingleTapUp(MotionEvent e) {
-                View clicked = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
-                if (clicked != null) {
-                    TextView tv = clicked.findViewById(R.id.name);
-                    String projectName = tv.getText().toString();
-                    openProjectActivity(projectName);
-                    return true;
-                } else {
-                    return false;
-                }
-            }
-        });
+//        // Set up the gesture detector to open the ProjectActivity on a user click
+//        mGestures = new GestureDetectorCompat(getActivity(), new GestureDetector.SimpleOnGestureListener() {
+//            @Override
+//            public boolean onSingleTapUp(MotionEvent e) {
+//                View clicked = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
+//                if (clicked != null) {
+//                    TextView tv = clicked.findViewById(R.id.name);
+//                    String projectName = tv.getText().toString();
+//                    openProjectActivity(projectName);
+//                    return true;
+//                } else {
+//                    return false;
+//                }
+//            }
+//        });
 
 //        // Add a OnItemTouchListener to collect information for the GestureDetector
 //        mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
@@ -284,14 +297,6 @@ public class ProjectListFragment extends ResultFragment implements
               .show(getFragmentManager(), TAG_DIALOG_CREATE_PROJECT);
     }
 
-    private void openProjectActivity(String projectName) {
-        if (!TextUtils.isEmpty(projectName)) {
-            Intent projectIntent = new Intent(getActivity(), ProjectActivity.class);
-            projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
-            startActivity(projectIntent);
-        }
-    }
-
     @Override
     public void onClockInOutClicked(String projectName) {
         ProjectData projectData = new ProjectData(getActivity());
@@ -335,10 +340,99 @@ public class ProjectListFragment extends ResultFragment implements
     }
 
     @Override
-    public void onSettingsClicked(String projectName) {
-        Intent projectIntent = new Intent(getActivity(), ProjectSettingsActivity.class);
-        projectIntent.putExtra(Intent.EXTRA_TEXT, projectName);
-        startActivity(projectIntent);
+    public void onSettingsClicked(View view, String projectName) {
+        mSelectedProjectName = projectName;
+        PopupMenu popup = new PopupMenu(getActivity(), view);
+        MenuInflater inflater = popup.getMenuInflater();
+        inflater.inflate(R.menu.project_menu, popup.getMenu());
+        popup.setOnMenuItemClickListener(this);
+        popup.setOnDismissListener(this);
+        popup.show();
+    }
+
+    @Override
+    public void onDismiss(PopupMenu popupMenu) {
+        mSelectedProjectName = null;
+    }
+
+    @Override
+    public boolean onMenuItemClick(MenuItem menuItem) {
+        int id = menuItem.getItemId();
+        if (id == R.id.settings) {
+            Intent projectIntent = new Intent(getActivity(), ProjectSettingsActivity.class);
+            projectIntent.putExtra(Intent.EXTRA_TEXT, mSelectedProjectName);
+            startActivity(projectIntent);
+        } else if (id == R.id.edit) {
+            Intent projectIntent = new Intent(getActivity(), EditActivity.class);
+            projectIntent.putExtra(Intent.EXTRA_TEXT, mSelectedProjectName);
+            startActivity(projectIntent);
+        } else if (id == R.id.export) {
+            // Allow the user to pick a file destination from the storage
+            // access framework
+            Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+            // Only allow files which can be opened
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            // Set the MIME type to comma-separated variables
+            intent.setType("text/csv");
+            // Set a default title
+            intent.putExtra(Intent.EXTRA_TITLE, mSelectedProjectName + ".csv");
+            // Start the activity to get the file
+            startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
+        } else if (id == R.id.mark_notification) {
+            // The user wants to pin a "sticky" notification to which allows
+            // the user to clock in/out or mark items
+            getActivity().sendBroadcast(new ProjectReceiver.IntentBuilder(
+                        getActivity(), mSelectedProjectName)
+                    .setAction(ProjectReceiver.ACTION_POST_STICKY)
+                    .build());
+        }
+        return true;
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE_CREATE_DOCUMENT && resultCode == Activity.RESULT_OK) {
+            if (data != null) {
+                Uri uri = data.getData();
+                new AsyncTask<Uri, Void, Boolean>() {
+                    @Override
+                    protected Boolean doInBackground(Uri... uri) {
+                        boolean isError;
+                        try {
+                            OutputStream os = getActivity().getContentResolver()
+                                    .openOutputStream(uri[0], "w");
+                            if (os == null) {
+                                isError = true;
+                            } else {
+                                os = new BufferedOutputStream(os);
+                                ProjectData projectData = new ProjectData(getActivity());
+                                isError = !projectData.dumpToCSV(mSelectedProjectName, os);
+                                projectData.close(getActivity());
+                                os.close();
+                            }
+                        } catch (IOException exception) {
+                            isError = true;
+                        }
+                        return isError;
+                    }
+
+                    @Override
+                    protected void onPostExecute(Boolean isError) {
+                        if (isError) {
+                            Snackbar.make(mRecyclerView,
+                                    getString(R.string.exported_error, mSelectedProjectName),
+                                    Snackbar.LENGTH_SHORT).show();
+                        } else {
+                            Snackbar.make(mRecyclerView,
+                                    getString(R.string.exported_success, mSelectedProjectName),
+                                    Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+                }.execute(uri);
+            }
+        } else {
+            super.onActivityResult(requestCode, resultCode, data);
+        }
     }
 
     @Override
@@ -360,8 +454,11 @@ public class ProjectListFragment extends ResultFragment implements
                         Snackbar.make(
                                 mRecyclerView, R.string.project_created,
                                 Snackbar.LENGTH_SHORT).show();
-                        // Open the project activity for the newly created project
-                        openProjectActivity(projectName);
+                        // Open the project settings for the newly created project
+                        Intent settingsIntent = new Intent(
+                                getActivity(), ProjectSettingsActivity.class);
+                        settingsIntent.putExtra(Intent.EXTRA_TEXT, projectName);
+                        startActivity(settingsIntent);
                     } else {
                         // Notify the user if that the project name already exists
                         DialogFragment alert = Dialogs.SimpleMessageDialogFragment

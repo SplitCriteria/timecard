@@ -28,3 +28,6 @@ Examples:
 - [ ] Add Extra Data Title use for export (could include commas in title and data to add virtually unlimited extra columns)
 - [ ] Add option to automatically capture broadcast events (e.g. phone up/down with Contact name as extra data)
 - [ ] Use LocalBroadcastManager and/or Intent.setPackage() for clock in/out and ProjectReceiver
+
+## Errors to Fix
+- [ ] If data deleted (in Edit mode) the remaining rows in the adapter don't account for the missing data (if others are edited, their row number is off by one)

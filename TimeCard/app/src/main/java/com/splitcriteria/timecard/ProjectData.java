@@ -106,9 +106,12 @@ class ProjectData {
         }
 
         @Override
-        public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
-            sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
-                                    KEY_DATA_SUMMARY_METHOD + " DEFAULT 'auto';");
+        public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
+            switch (oldVersion) {
+                case 1:
+                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                            KEY_DATA_SUMMARY_METHOD + " DEFAULT 'auto';");
+            }
         }
     }
 

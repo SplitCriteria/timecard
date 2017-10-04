@@ -46,7 +46,7 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
 
     interface OnProjectClickedListener {
         void onClockInOutClicked(String projectName);
-        void onSettingsClicked(String projectName);
+        void onSettingsClicked(View view, String projectName);
     }
 
     private List<String> mProjects = new ArrayList<>();
@@ -133,7 +133,7 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
             }
         } else if (id == R.id.project_settings) {
             for (OnProjectClickedListener listener : mListeners) {
-                listener.onSettingsClicked(projectName);
+                listener.onSettingsClicked(view, projectName);
             }
         }
     }
