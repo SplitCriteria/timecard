@@ -97,9 +97,19 @@ public class ProjectSettingsFragment extends PreferenceFragment implements
         preference = findPreference(getString(R.string.preferences_project_location_key));
         preference.setOnPreferenceChangeListener(this);
         ((SwitchPreference)preference).setChecked(metadata.trackLocation);
+        preference = findPreference(
+                getString(R.string.preferences_project_suppress_notification_key));
+        preference.setOnPreferenceChangeListener(this);
+        ((SwitchPreference)preference).setChecked(metadata.suppressNotification);
         preference = findPreference(getString(R.string.preferences_project_extra_data_key));
         preference.setOnPreferenceChangeListener(this);
         ((SwitchPreference)preference).setChecked(metadata.usesExtraData);
+        preference = findPreference(getString(R.string.preferences_project_extra_data_header_key));
+        preference.setOnPreferenceChangeListener(this);
+        preference.setSummary(TextUtils.isEmpty(metadata.extraDataTitle) ?
+                getString(R.string.preferences_project_extra_data_header_summary_default) :
+                getString(R.string.preferences_project_extra_data_header_summary,
+                        metadata.extraDataTitle));
         preference = findPreference(getString(R.string.preferences_project_default_extra_key));
         preference.setOnPreferenceChangeListener(this);
         preference.setSummary(TextUtils.isEmpty(metadata.defaultExtraData) ?
@@ -151,6 +161,14 @@ public class ProjectSettingsFragment extends PreferenceFragment implements
             int valueIndex = summaryValues.indexOf(metadata.dataSummaryMethod);
             preference.setSummary(getString(R.string.preferences_project_summary_description,
                     summaryMethods[valueIndex]));
+        } else if (key.equals(getString(R.string.preferences_project_extra_data_header_key))) {
+            metadata.extraDataTitle = (String)newValue;
+            preference.setSummary(TextUtils.isEmpty(metadata.extraDataTitle) ?
+                    getString(R.string.preferences_project_extra_data_header_summary_default) :
+                    getString(R.string.preferences_project_extra_data_header_summary,
+                            metadata.extraDataTitle));
+        } else if (key.equals(getString(R.string.preferences_project_suppress_notification_key))) {
+            metadata.suppressNotification = (Boolean)newValue;
         }
         // Update the project's metadata
         projectData.updateMetadata(mProjectName, metadata);

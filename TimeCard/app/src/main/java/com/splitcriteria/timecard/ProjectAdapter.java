@@ -1,7 +1,6 @@
 package com.splitcriteria.timecard;
 
 import android.content.Context;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.widget.CardView;
@@ -16,9 +15,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 /**
  * Timecard - Allows users to easily track time-based data for analysis.
@@ -60,13 +57,14 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
     private Comparator<DataGroup> mIgnoreCaseComparator = new Comparator<DataGroup>() {
                 @Override
                 public int compare(DataGroup dg0, DataGroup dg1) {
-                    return dg0.metadata.projectName.compareToIgnoreCase(dg1.metadata.projectName);
+                    return dg0.extendedMetadata.metadata.projectName.compareToIgnoreCase(
+                            dg1.extendedMetadata.metadata.projectName);
                 }
             };
 
 
     private static class DataGroup {
-        ProjectData.ExtendedMetadata metadata;
+        ProjectData.ExtendedMetadata extendedMetadata;
         TextView summary;
     }
 
@@ -111,10 +109,10 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
                         // Go through the data groups, check for projects which are clocked in
                         // and update the data summaries
                         for (DataGroup dataGroup : projectAdapter.mProjects) {
-                            dataGroup.metadata = projectData.getProjectExtendedMetadata(
-                                    dataGroup.metadata.projectName);
-                            if (dataGroup.metadata.clockedIn && dataGroup.summary != null) {
-                                dataGroup.summary.setText(dataGroup.metadata.dataSummary);
+                            dataGroup.extendedMetadata = projectData.getProjectExtendedMetadata(
+                                    dataGroup.extendedMetadata.metadata.projectName);
+                            if (dataGroup.extendedMetadata.clockedIn && dataGroup.summary != null) {
+                                dataGroup.summary.setText(dataGroup.extendedMetadata.dataSummary);
                                 updatedSummary = true;
                             }
                         }
@@ -140,12 +138,12 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         DataGroup dataGroup;
         for (String projectName : projectData.getProjectNames(true)) {
             dataGroup = new DataGroup();
-            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            dataGroup.extendedMetadata = projectData.getProjectExtendedMetadata(projectName);
             mProjects.add(dataGroup);
         }
         for (String projectName : projectData.getProjectNames(false)) {
             dataGroup = new DataGroup();
-            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            dataGroup.extendedMetadata = projectData.getProjectExtendedMetadata(projectName);
             mProjects.add(dataGroup);
         }
         projectData.close(context);
@@ -161,7 +159,7 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         DataGroup dataGroup;
         for (String projectName : projectData.getProjectNames(archived)) {
             dataGroup = new DataGroup();
-            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            dataGroup.extendedMetadata = projectData.getProjectExtendedMetadata(projectName);
             mProjects.add(dataGroup);
         }
         projectData.close(context);
@@ -182,15 +180,18 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         dataGroup.summary = holder.mSummary;
         // If the summary update handler doesn't have any messages waiting for it
         // then add an update message
-        if (dataGroup.metadata.clockedIn && !mSummaryUpdateHandler.hasMessages(UPDATE_SUMMARIES)) {
+        if (dataGroup.extendedMetadata.clockedIn &&
+                !mSummaryUpdateHandler.hasMessages(UPDATE_SUMMARIES)) {
             mSummaryUpdateHandler.sendEmptyMessageDelayed(UPDATE_SUMMARIES, UPDATE_RATE_MILLIS);
         }
-        holder.mSummary.setText(dataGroup.metadata.dataSummary);
-        holder.mProjectName.setText(dataGroup.metadata.projectName);
+        holder.mSummary.setText(dataGroup.extendedMetadata.dataSummary);
+        holder.mProjectName.setText(dataGroup.extendedMetadata.metadata.displayName);
         holder.mClockInOut.setOnClickListener(this);
-        holder.mClockInOut.setTag(R.id.project_name, dataGroup.metadata.projectName);
+        holder.mClockInOut.setTag(R.id.project_name,
+                                  dataGroup.extendedMetadata.metadata.projectName);
         holder.mSettings.setOnClickListener(this);
-        holder.mSettings.setTag(R.id.project_name, dataGroup.metadata.projectName);
+        holder.mSettings.setTag(R.id.project_name,
+                                dataGroup.extendedMetadata.metadata.projectName);
     }
 
     @Override
@@ -212,7 +213,7 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
 
     String getProjectName(int adapterPosition) {
         return adapterPosition < mProjects.size() ?
-                mProjects.get(adapterPosition).metadata.projectName : null;
+                mProjects.get(adapterPosition).extendedMetadata.metadata.projectName : null;
     }
 
     void remove(int adapterPosition) {
@@ -220,27 +221,50 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         notifyItemRemoved(adapterPosition);
     }
 
-    private int getIndexOf(String projectName) {
+    private int getPosition(String projectName) {
         for (int i = 0; i < mProjects.size(); i++) {
             DataGroup dataGroup = mProjects.get(i);
-            if (dataGroup.metadata.projectName.equals(projectName)) {
+            if (dataGroup.extendedMetadata.metadata.projectName.equals(projectName)) {
                 return i;
             }
         }
         return -1;
     }
 
+    /**
+     * Forces the adapter to update a project's data from the Project database
+     *
+     * @param projectName   the project name
+     * @return  true, if the update was successful
+     */
+    boolean updateProject(String projectName) {
+        Context context = mContextRef.get();
+        if (context == null) {
+            throw new RuntimeException("Unable to update project adapter: no Context.");
+        }
+        int position = getPosition(projectName);
+        if (position == -1) {
+            return false;
+        }
+        ProjectData projectData = new ProjectData(context);
+        mProjects.get(position).extendedMetadata =
+                projectData.getProjectExtendedMetadata(projectName);
+        projectData.close(context);
+        notifyItemChanged(position);
+        return true;
+    }
+
     public void add(Context context, String projectName) {
         // Add the project name (list is now unsorted)
         ProjectData projectData = new ProjectData(context);
         DataGroup dataGroup = new DataGroup();
-        dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+        dataGroup.extendedMetadata = projectData.getProjectExtendedMetadata(projectName);
         mProjects.add(dataGroup);
         projectData.close(context);
         // Sort the project names, ignoring the case
         Collections.sort(mProjects, mIgnoreCaseComparator);
         // Get the position of the newly inserted item
-        int position = getIndexOf(projectName);
+        int position = getPosition(projectName);
         // Notify listeners of the newly inserted item
         notifyItemInserted(position);
     }
@@ -249,7 +273,7 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
     public void onClick(View view) {
         // Get the project information based on the Project name (saved in the tag)
         String projectName = (String)view.getTag(R.id.project_name);
-        int position = getIndexOf(projectName);
+        int position = getPosition(projectName);
         DataGroup dataGroup = mProjects.get(position);
         int id = view.getId();
         if (id == R.id.project_clock_in_out) {

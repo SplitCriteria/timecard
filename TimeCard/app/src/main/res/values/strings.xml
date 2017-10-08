@@ -14,6 +14,8 @@
     <string name="dialog_get_extra_data_positive_button">Add</string>
     <string name="dialog_update_extra_data_positive_button">Update</string>
     <string name="dialog_immutable_not_clocked_in">The project must be clocked in before changing the end date or time.</string>
+    <string name="dialog_rename_project_title">Rename Project</string>
+    <string name="dialog_rename_project_message">Choose a new name for your project</string>
 
     <string name="error_title">Error</string>
     <string name="error_project_exists">A project already exists named \'%1$s\'.</string>
@@ -64,6 +66,7 @@
     <string name="notification_extra_data_instruction">Enter extra data</string>
     <string name="notification_action_dismiss">Dismiss</string>
     <string name="notification_row_deleted">Deleted event</string>
+    <string name="notification_project_renamed">Project renamed to \'%1$s\'</string>
 
     <string name="menu_title">Time Card</string>
     <string name="menu_current_projects">Current</string>
@@ -74,6 +77,7 @@
     <string name="menu_title_projects">Projects</string>
     <string name="menu_title_other">Other</string>
     <string name="menu_settings">Settings</string>
+    <string name="menu_rename_project">Rename</string>
 
     <string name="exported_error">Failed to export \'%1$s\'</string>
     <string name="exported_success">Exported \'%1$s\'</string>
@@ -123,6 +127,7 @@
     <string name="preferences_title_restore_alt">Restore Alternate</string>
     <string name="preferences_description_restore_alt">Choose an alternate backup to restore</string>
     <string name="preferences_key_restore_alt">restore_alt</string>
+
     <string name="preferences_project_options">Options</string>
     <string name="preferences_project_instant_title">Instant</string>
     <string name="preferences_project_instant_description">When enabled, project time frames are instantaneous (start and end time are the same)</string>
@@ -130,9 +135,16 @@
     <string name="preferences_project_location_title">Track Location</string>
     <string name="preferences_project_location_description">When enabled, location data is added for the duration of when this project is clocked in</string>
     <string name="preferences_project_location_key">track_location</string>
-    <string name="preferences_project_extra_data_title">Extra Data</string>
+
+    <string name="preferences_project_extra_data">Extra Data</string>
+    <string name="preferences_project_extra_data_title">Use Extra Data</string>
     <string name="preferences_project_extra_data_description">When enabled, the default extra data is added to each project or user is prompted</string>
     <string name="preferences_project_extra_data_key">extra_data</string>
+    <string name="preferences_project_extra_data_header_title">Export Column Name</string>
+    <string name="preferences_project_extra_data_header_summary_default">Change the column name used when exporting (note: using a comma will allow inserting multiple columns)</string>
+    <string name="preferences_project_extra_data_header_summary">Export column name: %1$s</string>
+    <string name="preferences_project_extra_data_header_dialog_message">Add a column name to be used when exporting the data. Note: since the export format is CSV, using a comma separated title and comma separated extra data effectively adds additional columns of extra data</string>
+    <string name="preferences_project_extra_data_header_key">extra_data_title</string>
     <string name="preferences_project_default_extra_title">Default Extra Data</string>
     <string name="preferences_project_default_extra_description">Click to add default extra data</string>
     <string name="preferences_project_default_extra_set_description">%1$s</string>
@@ -160,9 +172,17 @@
     </string-array>
     <string name="preferences_summary_type_default_value">@string/preferences_summary_type_auto</string>
 
+    <string name="preferences_project_notification_options">Notifications</string>
+    <string name="preferences_project_suppress_notification_title">Suppress Clock Out</string>
+    <string name="preferences_project_suppress_notification_summary">When selected, a clock out notification will not be shown when a project is clocked in</string>
+    <string name="preferences_project_suppress_notification_key">suppress_notification</string>
+
+
     <string name="default_backup_filename">Timecard_backup.db</string>
     <string name="default_database_filename">projects.db</string>
 
     <string name="toast_restore_success">Database restored!</string>
     <string name="toast_backup_success">Timecard data backed up</string>
+
+    <string name="delta_seconds">Delta (sec)</string>
 </resources>

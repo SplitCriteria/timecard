@@ -14,21 +14,16 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.design.widget.Snackbar;
-import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.text.TextUtils;
-import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.PopupMenu;
-import android.widget.TextView;
-import android.widget.Toast;
 
 import java.io.BufferedOutputStream;
 import java.io.IOException;
@@ -64,25 +59,25 @@ import java.io.OutputStream;
 public class ProjectListFragment extends ResultFragment implements
         ResultFragment.OnResultListener,
         ProjectAdapter.OnProjectClickedListener,
-        PopupMenu.OnDismissListener,
         PopupMenu.OnMenuItemClickListener {
 
     private static final String TAG_DIALOG_CREATE_PROJECT = "dialog_project";
     private static final String TAG_DIALOG_SIMPLE_MESSAGE = "simple_message";
     private static final String TAG_DIALOG_GET_EXTRA_DATA = "get_extra_data";
+    private static final String TAG_DIALOG_RENAME_PROJECT = "rename_project";
 
     private static final int MILLISECONDS_PER_DAY = 86400000;
     private static final int BACKUP_PERIOD = MILLISECONDS_PER_DAY;
 
     private static final int REQUEST_GET_EXTRA_DATA = 0;
     private static final int REQUEST_CODE_CREATE_PROJECT = 1;
-    private static final int REQUEST_CODE_CREATE_DOCUMENT = 2;
+    private static final int REQUEST_CODE_EXPORT_PROJECT = 2;
+    private static final int REQUEST_CODE_RENAME_PROJECT = 3;
 
     private static final String KEY_PROJECT_NAME = "project_name";
 
     private RecyclerView mRecyclerView;
     private ProjectAdapter mAdapter;
-    private GestureDetectorCompat mGestures;
     private boolean mShowingArchived = false;
     private ItemTouchHelper mCurrentProjectsItemTouchHelper;
     private ItemTouchHelper mArchivedProjectsItemTouchHelper;
@@ -218,7 +213,8 @@ public class ProjectListFragment extends ResultFragment implements
 
         // Refresh the project names
         refreshProjectNames();
-        // TODO test
+
+        // Schedule the backup job
         scheduleBackupJob();
 
         return root;
@@ -302,6 +298,10 @@ public class ProjectListFragment extends ResultFragment implements
             if (metadata.usesExtraData) {
                 intentBuilder.setExtraData(metadata.defaultExtraData);
             }
+            // If the user wants to suppress the notification, add that option
+            if (metadata.suppressNotification) {
+                intentBuilder.setSuppressNotification(true);
+            }
             // Send a broadcast which actually clocks in/out the project
             getActivity().sendBroadcast(intentBuilder.build());
             // Use a Snackbar to notify the user
@@ -310,7 +310,6 @@ public class ProjectListFragment extends ResultFragment implements
                                           isClockedIn ? R.string.project_clocked_out :
                                                         R.string.project_clocked_in, projectName),
                     Snackbar.LENGTH_SHORT).show();
-            // TODO change the button symbology
         }
         projectData.close(getActivity());
     }
@@ -322,13 +321,7 @@ public class ProjectListFragment extends ResultFragment implements
         MenuInflater inflater = popup.getMenuInflater();
         inflater.inflate(R.menu.project_menu, popup.getMenu());
         popup.setOnMenuItemClickListener(this);
-        popup.setOnDismissListener(this);
         popup.show();
-    }
-
-    @Override
-    public void onDismiss(PopupMenu popupMenu) {
-        mSelectedProjectName = null;
     }
 
     @Override
@@ -353,7 +346,7 @@ public class ProjectListFragment extends ResultFragment implements
             // Set a default title
             intent.putExtra(Intent.EXTRA_TITLE, mSelectedProjectName + ".csv");
             // Start the activity to get the file
-            startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
+            startActivityForResult(intent, REQUEST_CODE_EXPORT_PROJECT);
         } else if (id == R.id.mark_notification) {
             // The user wants to pin a "sticky" notification to which allows
             // the user to clock in/out or mark items
@@ -361,13 +354,30 @@ public class ProjectListFragment extends ResultFragment implements
                         getActivity(), mSelectedProjectName)
                     .setAction(ProjectReceiver.ACTION_POST_STICKY)
                     .build());
+        } else if (id == R.id.rename) {
+            // Display a dialog to allow the user to rename the project
+            ProjectData projectData = new ProjectData(getActivity());
+            ProjectData.Metadata metadata = projectData.getProjectMetadata(mSelectedProjectName);
+            projectData.close(getActivity());
+            // Add a bundle which contains the project name
+            Bundle bundle = new Bundle();
+            bundle.putString(KEY_PROJECT_NAME, mSelectedProjectName);
+            // Create and show the dialog
+            Dialogs.UserInputDialogFragment.createUserInputDialog(
+                        getString(R.string.dialog_rename_project_title),
+                        getString(R.string.dialog_rename_project_message),
+                        android.R.string.ok, metadata.displayName)
+                    .setOnResultListener(this)
+                    .setRequestCode(REQUEST_CODE_RENAME_PROJECT)
+                    .putExtras(bundle)
+                    .show(getFragmentManager(), TAG_DIALOG_RENAME_PROJECT);
         }
         return true;
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_CODE_CREATE_DOCUMENT && resultCode == Activity.RESULT_OK) {
+        if (requestCode == REQUEST_CODE_EXPORT_PROJECT && resultCode == Activity.RESULT_OK) {
             if (data != null) {
                 Uri uri = data.getData();
                 new AsyncTask<Uri, Void, Boolean>() {
@@ -474,8 +484,24 @@ public class ProjectListFragment extends ResultFragment implements
                                           isClockedIn ? R.string.project_clocked_out :
                                                         R.string.project_clocked_in, projectName),
                     Snackbar.LENGTH_SHORT).show();
-            // TODO change the button symbology
             // TODO combine this code with the one above to reduce
+        } else if (requestCode == REQUEST_CODE_RENAME_PROJECT && resultCode == Activity.RESULT_OK) {
+            // Get the project name from the extras
+            Bundle extras = intent.getBundleExtra(ResultFragment.EXTRA_BUNDLE);
+            String projectName = extras.getString(KEY_PROJECT_NAME);
+            String displayName = intent.getStringExtra(
+                    Dialogs.UserInputDialogFragment.KEY_USER_INPUT);
+            // Rename the project
+            ProjectData projectData = new ProjectData(getActivity());
+            projectData.renameProject(projectName, displayName);
+            projectData.close(getActivity());
+            // Notify the adapter the project's data has changed
+            mAdapter.updateProject(projectName);
+            // Inform the user via Snackbar
+            Snackbar.make(mRecyclerView,
+                          getString(R.string.notification_project_renamed, displayName),
+                          Snackbar.LENGTH_SHORT)
+                    .show();
         }
     }
 

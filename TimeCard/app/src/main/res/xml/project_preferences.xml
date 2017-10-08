@@ -16,12 +16,22 @@
             android:title="@string/preferences_project_location_title"
             android:summary="@string/preferences_project_location_description"
             android:defaultValue="false" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/preferences_project_extra_data">
 
         <SwitchPreference
             android:key="@string/preferences_project_extra_data_key"
             android:title="@string/preferences_project_extra_data_title"
             android:summary="@string/preferences_project_extra_data_description"
             android:defaultValue="false" />
+
+        <EditTextPreference
+            android:key="@string/preferences_project_extra_data_header_key"
+            android:title="@string/preferences_project_extra_data_header_title"
+            android:summary="@string/preferences_project_extra_data_header_summary_default"
+            android:dialogTitle="@string/preferences_project_extra_data_header_title"
+            android:dialogMessage="@string/preferences_project_extra_data_header_dialog_message" />
 
         <EditTextPreference
             android:key="@string/preferences_project_default_extra_key"
@@ -38,5 +48,14 @@
             android:entryValues="@array/preferences_summary_type_values"
             android:defaultValue="@string/preferences_summary_type_default_value"/>
 
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="@string/preferences_project_notification_options">
+
+        <SwitchPreference
+            android:key="@string/preferences_project_suppress_notification_key"
+            android:title="@string/preferences_project_suppress_notification_title"
+            android:summary="@string/preferences_project_suppress_notification_summary"
+            android:defaultValue="false" />
     </PreferenceCategory>
 </PreferenceScreen>

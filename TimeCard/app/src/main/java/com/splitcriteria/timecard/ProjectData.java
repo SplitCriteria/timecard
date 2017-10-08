@@ -8,7 +8,6 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.ArrayMap;
-
 import java.io.IOException;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
@@ -54,16 +53,19 @@ class ProjectData {
     private SQLiteDatabase mDatabase;
     private WeakReference<Context> mContextRef;
 
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
     // Projects metadata table name and column names
     private static final String PROJECTS_TABLE = "projects";
     private static final String KEY_PROJECT_NAME = "name";
+    private static final String KEY_DISPLAY_NAME = "display_name";
     private static final String KEY_ARCHIVED = "archived";
     private static final String KEY_TRACK_LOCATION = "track_location";
     private static final String KEY_NO_DURATION = "no_duration";
     private static final String KEY_USES_EXTRA_DATA = "use_extra";
+    private static final String KEY_EXTRA_DATA_TITLE = "extra_data_title";
     private static final String KEY_DEFAULT_EXTRA_DATA = "default_extra";
     private static final String KEY_DATA_SUMMARY_METHOD = "data_summary_method";
+    private static final String KEY_SUPPRESS_NOTIFICATION = "suppress_notification";
     private static final String KEY_CURRENT_TIMECARD = "current_timecard_row";
     // Project timecard table column names
     private static final String KEY_START_TIME = "start";
@@ -76,22 +78,19 @@ class ProjectData {
         boolean archived;
         boolean trackLocation;
         boolean noDuration;
+        boolean suppressNotification;
         boolean usesExtraData;
+        String extraDataTitle;
+        String projectName;
+        String displayName;
         String defaultExtraData;
         int currentTimecard;
         String dataSummaryMethod;
     }
 
     class ExtendedMetadata {
-        boolean archived;
-        boolean trackLocation;
-        boolean noDuration;
-        boolean usesExtraData;
-        String defaultExtraData;
-        int currentTimecard;
-        String dataSummaryMethod;
+        Metadata metadata;
 
-        String projectName;
         int totalTime;
         int metadataTime;
         boolean clockedIn;
@@ -113,29 +112,47 @@ class ProjectData {
 
         @Override
         public void onCreate(SQLiteDatabase sqLiteDatabase) {
+            Context context = mContextRef.get();
+            if (context == null) {
+                throw new RuntimeException("Missing Context: unable to upgrade database.");
+            }
+            String defaultDataSummary =
+                    "'" + context.getString(R.string.preferences_summary_type_default_value) + "'";
             sqLiteDatabase.execSQL("CREATE TABLE " + PROJECTS_TABLE + " (" +
                                    KEY_PROJECT_NAME + " TEXT," +
+                                   KEY_DISPLAY_NAME + " TEXT," +
                                    KEY_ARCHIVED + " INTEGER DEFAULT 0," +
                                    KEY_TRACK_LOCATION + " INTEGER DEFAULT 0," +
                                    KEY_NO_DURATION + " INTEGER DEFAULT 0," +
+                                   KEY_SUPPRESS_NOTIFICATION + " INTEGER DEFAULT 0," +
                                    KEY_USES_EXTRA_DATA + " INTEGER DEFAULT 0," +
+                                   KEY_EXTRA_DATA_TITLE + " TEXT," +
                                    KEY_DEFAULT_EXTRA_DATA + " TEXT DEFAULT NULL," +
+                                   KEY_DATA_SUMMARY_METHOD + " TEXT DEFAULT " +
+                                        defaultDataSummary + "," +
                                    KEY_CURRENT_TIMECARD + " INTEGER DEFAULT -1);");
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
+            Context context = mContextRef.get();
+            if (context == null) {
+                throw new RuntimeException("Missing Context: unable to upgrade database.");
+            }
             switch (oldVersion) {
                 case 1:
-                    Context context = mContextRef.get();
-                    if (context != null) {
-                        sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
-                                KEY_DATA_SUMMARY_METHOD + " DEFAULT '" +
-                                context.getString(R.string.preferences_summary_type_default_value) +
-                                "';");
-                    } else {
-                        throw new RuntimeException("Missing Context: unable to upgrade database.");
-                    }
+                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                            KEY_DATA_SUMMARY_METHOD + " TEXT DEFAULT '" +
+                            context.getString(R.string.preferences_summary_type_default_value) +
+                            "';");
+                case 2:
+                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                            KEY_DISPLAY_NAME + " TEXT;");
+                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                            KEY_SUPPRESS_NOTIFICATION + " INTEGER DEFAULT 0;");
+                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                            KEY_EXTRA_DATA_TITLE + " TEXT;");
+
             }
         }
     }
@@ -167,23 +184,34 @@ class ProjectData {
         Map<String, Metadata> results = new ArrayMap<>();
         Cursor cursor = mDatabase.rawQuery("SELECT * FROM " + PROJECTS_TABLE + ";", null);
         int nameIndex = cursor.getColumnIndex(KEY_PROJECT_NAME);
+        int displayNameIndex = cursor.getColumnIndex(KEY_DISPLAY_NAME);
         int archivedIndex = cursor.getColumnIndex(KEY_ARCHIVED);
         int trackLocationIndex = cursor.getColumnIndex(KEY_TRACK_LOCATION);
+        int suppressNotificationIndex = cursor.getColumnIndex(KEY_SUPPRESS_NOTIFICATION);
         int currentTimecardIndex = cursor.getColumnIndex(KEY_CURRENT_TIMECARD);
         int usesExtraDataIndex = cursor.getColumnIndex(KEY_USES_EXTRA_DATA);
+        int extraDataTitleIndex = cursor.getColumnIndex(KEY_EXTRA_DATA_TITLE);
         int defaultExtraDataIndex = cursor.getColumnIndex(KEY_DEFAULT_EXTRA_DATA);
         int noDurationIndex = cursor.getColumnIndex(KEY_NO_DURATION);
         int dataSummaryIndex = cursor.getColumnIndex(KEY_DATA_SUMMARY_METHOD);
         while (cursor.moveToNext()) {
             Metadata metadata = new Metadata();
+            metadata.projectName = cursor.getString(nameIndex);
+            metadata.displayName = cursor.getString(displayNameIndex);
+            // If the display name is not set, then use the project name
+            if (TextUtils.isEmpty(metadata.displayName)) {
+                metadata.displayName = metadata.projectName;
+            }
             metadata.archived = cursor.getInt(archivedIndex) != 0;
             metadata.trackLocation = cursor.getInt(trackLocationIndex) != 0;
+            metadata.suppressNotification = cursor.getInt(suppressNotificationIndex) != 0;
             metadata.currentTimecard = cursor.getInt(currentTimecardIndex);
             metadata.usesExtraData = cursor.getInt(usesExtraDataIndex) != 0;
+            metadata.extraDataTitle = cursor.getString(extraDataTitleIndex);
             metadata.defaultExtraData = cursor.getString(defaultExtraDataIndex);
             metadata.noDuration = cursor.getInt(noDurationIndex) != 0;
             metadata.dataSummaryMethod = cursor.getString(dataSummaryIndex);
-            results.put(cursor.getString(nameIndex), metadata);
+            results.put(metadata.projectName, metadata);
         }
         cursor.close();
         return results;
@@ -209,17 +237,11 @@ class ProjectData {
         Metadata metadata = getMetadata().get(projectName);
         if (metadata != null) {
             ExtendedMetadata extendedMetadata = new ExtendedMetadata();
-            extendedMetadata.archived = metadata.archived;
-            extendedMetadata.trackLocation = metadata.trackLocation;
-            extendedMetadata.currentTimecard = metadata.currentTimecard;
-            extendedMetadata.usesExtraData = metadata.usesExtraData;
-            extendedMetadata.defaultExtraData = metadata.defaultExtraData;
-            extendedMetadata.noDuration = metadata.noDuration;
-            extendedMetadata.dataSummaryMethod = metadata.dataSummaryMethod;
+            extendedMetadata.metadata = metadata;
             extendedMetadata.clockedIn = isClockedIn(projectName);
             List<Row> rowData = getRows(projectName);
             extendedMetadata.dataSummary = DataSummary.getSummary(
-                    mContextRef.get(), extendedMetadata.dataSummaryMethod, rowData);
+                    mContextRef.get(), extendedMetadata.metadata.dataSummaryMethod, rowData);
             extendedMetadata.totalTime = 0;
             Calendar now = Calendar.getInstance(Locale.getDefault());
             for (Row row : rowData) {
@@ -227,7 +249,6 @@ class ProjectData {
                 extendedMetadata.totalTime +=
                         (int)((endTime.getTimeInMillis()-row.startTime.getTimeInMillis())/1000);
             }
-            extendedMetadata.projectName = projectName;
             extendedMetadata.metadataTime = (int)(now.getTimeInMillis() / 1000);
             return extendedMetadata;
         } else {
@@ -321,6 +342,11 @@ class ProjectData {
     boolean updateMetadata(String project, @NonNull Metadata newMetadata) {
         Metadata prevMetadata = getProjectMetadata(project);
         if (prevMetadata != null) {
+            // Change the display name
+            if (TextUtils.isEmpty(prevMetadata.displayName) ||
+                    !prevMetadata.displayName.equals(newMetadata.displayName)) {
+                setMetadataValue(project, KEY_DISPLAY_NAME, newMetadata.displayName);
+            }
             // Change the metadata properties which are different
             if (prevMetadata.noDuration != newMetadata.noDuration) {
                 setMetadataValue(project, KEY_NO_DURATION, newMetadata.noDuration);
@@ -343,8 +369,16 @@ class ProjectData {
             if (prevMetadata.trackLocation != newMetadata.trackLocation) {
                 setMetadataValue(project, KEY_TRACK_LOCATION, newMetadata.trackLocation);
             }
+            if (prevMetadata.suppressNotification != newMetadata.suppressNotification) {
+                setMetadataValue(project, KEY_SUPPRESS_NOTIFICATION,
+                                 newMetadata.suppressNotification);
+            }
             if (!prevMetadata.dataSummaryMethod.equals(newMetadata.dataSummaryMethod)) {
                 setMetadataValue(project, KEY_DATA_SUMMARY_METHOD, newMetadata.dataSummaryMethod);
+            }
+            if (TextUtils.isEmpty(prevMetadata.extraDataTitle) ||
+                    !prevMetadata.extraDataTitle.equals(newMetadata.extraDataTitle)) {
+                setMetadataValue(project, KEY_EXTRA_DATA_TITLE, newMetadata.extraDataTitle);
             }
             return true;
         } else {
@@ -375,13 +409,13 @@ class ProjectData {
     /**
      * Renames a project
      *
-     * @param oldProjectName    the current project name
-     * @param newProjectName    the new project name
+     * @param projectName    the project's name
+     * @param displayName    the new display name to be used
      * @return  true, if the rename was successful
      */
-    boolean renameProject(String oldProjectName, String newProjectName) {
-        return exists(oldProjectName) &&
-                setMetadataValue(oldProjectName, KEY_PROJECT_NAME, newProjectName);
+    boolean renameProject(String projectName, String displayName) {
+        // Rename a project by altering its display name
+        return exists(projectName) && setMetadataValue(projectName, KEY_DISPLAY_NAME, displayName);
     }
 
     /**
@@ -740,11 +774,21 @@ class ProjectData {
     }
 
     boolean dumpToCSV(String project, OutputStream os) {
+        Context context = mContextRef.get();
+        if (context == null) {
+            throw new RuntimeException("Unable to export: no Context found.");
+        }
         if (exists(project)) {
+            // Get the extra data column title or use a the database column name
+            Metadata metadata = getProjectMetadata(project);
+            if (TextUtils.isEmpty(metadata.extraDataTitle)) {
+                metadata.extraDataTitle = KEY_EXTRA_DATA;
+            }
             Cursor cursor = mDatabase.rawQuery("SELECT * FROM '" + project + "';", null);
             try {
                 os.write((KEY_START_TIME + "," + KEY_END_TIME + "," +
-                         "Delta (seconds)" + "," + KEY_EXTRA_DATA + "\n")
+                         context.getString(R.string.delta_seconds) + "," +
+                         metadata.extraDataTitle + "\n")
                         .getBytes("utf-8"));
                 int startIndex = cursor.getColumnIndex(KEY_START_TIME);
                 int endIndex = cursor.getColumnIndex(KEY_END_TIME);
