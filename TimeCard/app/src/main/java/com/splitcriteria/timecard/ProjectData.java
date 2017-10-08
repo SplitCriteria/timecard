@@ -378,6 +378,9 @@ class ProjectData {
             }
             if (TextUtils.isEmpty(prevMetadata.extraDataTitle) ||
                     !prevMetadata.extraDataTitle.equals(newMetadata.extraDataTitle)) {
+                if (TextUtils.isEmpty(newMetadata.extraDataTitle)) {
+                    newMetadata.extraDataTitle = "";
+                }
                 setMetadataValue(project, KEY_EXTRA_DATA_TITLE, newMetadata.extraDataTitle);
             }
             return true;

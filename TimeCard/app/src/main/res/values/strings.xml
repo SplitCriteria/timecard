@@ -44,7 +44,10 @@
     <string name="time_average">Avg: %1$s</string>
     <string name="average_extra_data_none">Avg: None</string>
     <string name="average_extra_data">Avg: %1$.2f</string>
-    <string name="preferences_summary_unknown">Data Summary Unavailable</string>
+    <string name="data_summary_unknown">Data Summary Unavailable</string>
+    <string name="data_summary_count">Count: %1$d since %2$s</string>
+    <string name="data_summary_frequency_and_next_occurrence">Frequency: %1$s\nProjected: %2$s</string>
+    <string name="data_summary_simple_date_format">dd MMM yyyy</string>
 
     <string name="restore_confirm_title">Confirm Restore</string>
     <string name="restore_confirm_message">Restoring a backup database will overwrite the current database. Are you sure?</string>
@@ -159,16 +162,22 @@
         <item>Total Time</item>
         <item>Average Time</item>
         <item>Average Extra Data</item>
+        <item>Count</item>
+        <item>Frequency &amp; Next Occurrence</item>
     </string-array>
     <string name="preferences_summary_type_auto">auto</string>
     <string name="preferences_summary_type_total_time">total_time</string>
     <string name="preferences_summary_type_average_time">average_time</string>
     <string name="preferences_summary_type_average_extra_data">average_extra_data</string>
+    <string name="preferences_summary_type_count">count</string>
+    <string name="preferences_summary_type_frequency">frequency</string>
     <string-array name="preferences_summary_type_values">
         <item>@string/preferences_summary_type_auto</item>
         <item>@string/preferences_summary_type_total_time</item>
         <item>@string/preferences_summary_type_average_time</item>
         <item>@string/preferences_summary_type_average_extra_data</item>
+        <item>@string/preferences_summary_type_count</item>
+        <item>@string/preferences_summary_type_frequency</item>
     </string-array>
     <string name="preferences_summary_type_default_value">@string/preferences_summary_type_auto</string>
 

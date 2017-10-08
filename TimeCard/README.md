@@ -16,10 +16,11 @@ Examples:
 - [x] Add extra data to be added via a "Clock Out" notification
 - [x] Create a persistent backup (e.g. Service which automatically backs up database)
 - [x] Create a backup activity which allows removal of backup,
-- [x] Add summary of data on project list screen and options in project preferences (e.g. total duration, average, count, projected next occurrence)
+- [x] Add summary of data on project list screen and options in project preferences (e.g. total duration, average)
 - [x] Add confirmation dialog when restoring backup
 - [x] Add ability to suppress the "clock out" notification (i.e. no indication that project is clocked in)
 - [x] Group project settings into logical bins
+- [x] Add new data summary options (i.e. count, frequency, projected next event)
 - [ ] Allow a widget to get Extra Data from a user if they are clicking into a project which uses extra data but doesn't have default data specified
 - [ ] Allow recording/showing of backup/restore history, etc.
 - [ ] Add location tracking
