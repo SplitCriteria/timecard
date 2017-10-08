@@ -1,5 +1,9 @@
 package com.splitcriteria.timecard;
 
+import android.content.Context;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
@@ -10,10 +14,11 @@ import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Timecard - Allows users to easily track time-based data for analysis.
@@ -49,14 +54,25 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         void onSettingsClicked(View view, String projectName);
     }
 
-    private List<String> mProjects = new ArrayList<>();
+    private static final int UPDATE_SUMMARIES = 0;
+    private static final long UPDATE_RATE_MILLIS = 1000;
+
+    private Comparator<DataGroup> mIgnoreCaseComparator = new Comparator<DataGroup>() {
+                @Override
+                public int compare(DataGroup dg0, DataGroup dg1) {
+                    return dg0.metadata.projectName.compareToIgnoreCase(dg1.metadata.projectName);
+                }
+            };
+
+
+    private static class DataGroup {
+        ProjectData.ExtendedMetadata metadata;
+        TextView summary;
+    }
+
+    private WeakReference<Context> mContextRef;
+    private List<DataGroup> mProjects;
     private List<OnProjectClickedListener> mListeners = new ArrayList<>();
-    private Comparator<String> mIgnoreCaseStringComparator = new Comparator<String>() {
-        @Override
-        public int compare(String s, String t1) {
-            return s.compareToIgnoreCase(t1);
-        }
-    };
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         CardView mCardView;
@@ -74,11 +90,83 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         }
     }
 
-    ProjectAdapter(String[] projects) {
-        // Add all the project names
-        mProjects.addAll(Arrays.asList(projects));
-        // Sort them, ignoring the case
-        Collections.sort(mProjects, mIgnoreCaseStringComparator);
+    private static class SummaryUpdateHandler extends Handler {
+
+        private WeakReference<ProjectAdapter> mAdapter;
+
+        SummaryUpdateHandler(ProjectAdapter adapter) {
+            mAdapter = new WeakReference<>(adapter);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            if (msg.what == UPDATE_SUMMARIES) {
+                ProjectAdapter projectAdapter = mAdapter.get();
+                if (projectAdapter != null) {
+                    Context context = projectAdapter.mContextRef.get();
+                    boolean updatedSummary = false;
+                    if (context != null) {
+                        // Refresh the metadata of the projects
+                        ProjectData projectData = new ProjectData(context);
+                        // Go through the data groups, check for projects which are clocked in
+                        // and update the data summaries
+                        for (DataGroup dataGroup : projectAdapter.mProjects) {
+                            dataGroup.metadata = projectData.getProjectExtendedMetadata(
+                                    dataGroup.metadata.projectName);
+                            if (dataGroup.metadata.clockedIn && dataGroup.summary != null) {
+                                dataGroup.summary.setText(dataGroup.metadata.dataSummary);
+                                updatedSummary = true;
+                            }
+                        }
+                        projectData.close(context);
+                    }
+                    // If there were data summary updates, then call this handler again
+                    // if there's not another pending message waiting to be called
+                    if (updatedSummary && !hasMessages(UPDATE_SUMMARIES)) {
+                        sendEmptyMessageDelayed(UPDATE_SUMMARIES, UPDATE_RATE_MILLIS);
+                    }
+                }
+            }
+        }
+    }
+
+    private SummaryUpdateHandler mSummaryUpdateHandler = new SummaryUpdateHandler(this);
+
+    ProjectAdapter(Context context) {
+        mContextRef = new WeakReference<>(context);
+        mProjects = new ArrayList<>();
+        ProjectData projectData = new ProjectData(context);
+        // Add both archived and non-archived projects to the project list
+        DataGroup dataGroup;
+        for (String projectName : projectData.getProjectNames(true)) {
+            dataGroup = new DataGroup();
+            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            mProjects.add(dataGroup);
+        }
+        for (String projectName : projectData.getProjectNames(false)) {
+            dataGroup = new DataGroup();
+            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            mProjects.add(dataGroup);
+        }
+        projectData.close(context);
+        // Sort the list
+        Collections.sort(mProjects, mIgnoreCaseComparator);
+    }
+
+    ProjectAdapter(Context context, boolean archived) {
+        mContextRef = new WeakReference<>(context);
+        mProjects = new ArrayList<>();
+        ProjectData projectData = new ProjectData(context);
+        // Add both archived and non-archived projects to the project list
+        DataGroup dataGroup;
+        for (String projectName : projectData.getProjectNames(archived)) {
+            dataGroup = new DataGroup();
+            dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+            mProjects.add(dataGroup);
+        }
+        projectData.close(context);
+        // Sort the list
+        Collections.sort(mProjects, mIgnoreCaseComparator);
     }
 
     @Override
@@ -90,12 +178,31 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
 
     @Override
     public void onBindViewHolder(ViewHolder holder, int position) {
-        String projectName = mProjects.get(position);
-        holder.mProjectName.setText(projectName);
+        DataGroup dataGroup = mProjects.get(position);
+        dataGroup.summary = holder.mSummary;
+        // If the summary update handler doesn't have any messages waiting for it
+        // then add an update message
+        if (dataGroup.metadata.clockedIn && !mSummaryUpdateHandler.hasMessages(UPDATE_SUMMARIES)) {
+            mSummaryUpdateHandler.sendEmptyMessageDelayed(UPDATE_SUMMARIES, UPDATE_RATE_MILLIS);
+        }
+        holder.mSummary.setText(dataGroup.metadata.dataSummary);
+        holder.mProjectName.setText(dataGroup.metadata.projectName);
         holder.mClockInOut.setOnClickListener(this);
-        holder.mClockInOut.setTag(R.id.project_name, projectName);
+        holder.mClockInOut.setTag(R.id.project_name, dataGroup.metadata.projectName);
         holder.mSettings.setOnClickListener(this);
-        holder.mSettings.setTag(R.id.project_name, projectName);
+        holder.mSettings.setTag(R.id.project_name, dataGroup.metadata.projectName);
+    }
+
+    @Override
+    public void onViewRecycled(ViewHolder holder) {
+        // This ViewHolder is being recycled, so remove the Summary text reference
+        // from the DataGroup. This way, the SummaryUpdateHandler won't try to update
+        // a recycled reference
+        int position = holder.getAdapterPosition();
+        if (position != RecyclerView.NO_POSITION) {
+            DataGroup dataGroup = mProjects.get(position);
+            dataGroup.summary = null;
+        }
     }
 
     @Override
@@ -104,7 +211,8 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
     }
 
     String getProjectName(int adapterPosition) {
-        return adapterPosition < mProjects.size() ? mProjects.get(adapterPosition) : null;
+        return adapterPosition < mProjects.size() ?
+                mProjects.get(adapterPosition).metadata.projectName : null;
     }
 
     void remove(int adapterPosition) {
@@ -112,20 +220,37 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
         notifyItemRemoved(adapterPosition);
     }
 
-    public void add(String projectName) {
+    private int getIndexOf(String projectName) {
+        for (int i = 0; i < mProjects.size(); i++) {
+            DataGroup dataGroup = mProjects.get(i);
+            if (dataGroup.metadata.projectName.equals(projectName)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public void add(Context context, String projectName) {
         // Add the project name (list is now unsorted)
-        mProjects.add(projectName);
+        ProjectData projectData = new ProjectData(context);
+        DataGroup dataGroup = new DataGroup();
+        dataGroup.metadata = projectData.getProjectExtendedMetadata(projectName);
+        mProjects.add(dataGroup);
+        projectData.close(context);
         // Sort the project names, ignoring the case
-        Collections.sort(mProjects, mIgnoreCaseStringComparator);
+        Collections.sort(mProjects, mIgnoreCaseComparator);
         // Get the position of the newly inserted item
-        int position = mProjects.indexOf(projectName);
+        int position = getIndexOf(projectName);
         // Notify listeners of the newly inserted item
         notifyItemInserted(position);
     }
 
     @Override
     public void onClick(View view) {
+        // Get the project information based on the Project name (saved in the tag)
         String projectName = (String)view.getTag(R.id.project_name);
+        int position = getIndexOf(projectName);
+        DataGroup dataGroup = mProjects.get(position);
         int id = view.getId();
         if (id == R.id.project_clock_in_out) {
             for (OnProjectClickedListener listener : mListeners) {
@@ -135,6 +260,12 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
             for (OnProjectClickedListener listener : mListeners) {
                 listener.onSettingsClicked(view, projectName);
             }
+        }
+        // Re-pull the project's metadata after all the listeners have been
+        // called (in case the metadata changed)
+        Context context = mContextRef.get();
+        if (context != null) {
+            mSummaryUpdateHandler.sendEmptyMessageDelayed(UPDATE_SUMMARIES, UPDATE_RATE_MILLIS);
         }
     }
 

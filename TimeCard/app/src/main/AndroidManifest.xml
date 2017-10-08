@@ -37,19 +37,11 @@
                 android:value=".MainActivity" />
         </activity>
         <activity
-            android:name=".ProjectActivity"
-            android:parentActivityName=".MainActivity"
-            android:launchMode="singleTop" >
+            android:name=".EditActivity"
+            android:parentActivityName=".MainActivity">
             <meta-data
                 android:name="android.support.PARENT_ACTIVITY"
                 android:value=".MainActivity" />
-        </activity>
-        <activity
-            android:name=".EditActivity"
-            android:parentActivityName=".ProjectActivity">
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value=".ProjectActivity" />
         </activity>
         <activity android:name=".ProjectWidgetSetupActivity">
             <intent-filter>

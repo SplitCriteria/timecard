@@ -2,6 +2,7 @@ package com.splitcriteria.timecard;
 
 import android.content.Context;
 import android.net.Uri;
+import android.preference.Preference;
 import android.util.AttributeSet;
 
 /**
@@ -26,11 +27,11 @@ import android.util.AttributeSet;
  * This is free software, and you are welcome to redistribute it
  * under certain conditions; type `show c' for details.
  *
- * A simple implementation of ClickPreference which allows a client to
+ * A simple implementation of Preference which allows a client to
  * persist a Uri (held in a String)
  */
 
-public class UriPreference extends ClickPreference {
+public class UriPreference extends Preference {
 
     public UriPreference(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);

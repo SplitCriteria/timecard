@@ -45,11 +45,17 @@ import java.util.List;
  */
 
 public class SettingsFragment extends PreferenceFragment implements
-        ClickPreference.OnClickListener,
+        Preference.OnPreferenceClickListener,
+        ResultFragment.OnResultListener,
         RestoreService.OnRestoredListener {
 
     private static final int REQUEST_CODE_CREATE_DOCUMENT = 0;
     private static final int REQUEST_CODE_OPEN_DOCUMENT = 1;
+    private static final int REQUEST_CODE_RESTORE_BACKUP = 2;
+    private static final int REQUEST_CODE_RESTORE_ALTERNATE_BACKUP = 3;
+
+    private static final String TAG_RESTORE_BACKUP = "restore_backup";
+    private static final String TAG_RESTORE_ALTERNATE_BACKUP = "restore_alternate_backup";
 
     private UriPreference mSAFPreference;
     private RestoreService mRestoreService;
@@ -78,11 +84,9 @@ public class SettingsFragment extends PreferenceFragment implements
                 getString(R.string.preferences_key_backup_uri));
         refreshSAFSummaryText();
         // Set OnClick listeners for the custom preferences
-        mSAFPreference.addOnClickListener(this);
-        ((ClickPreference)findPreference(getString(R.string.preferences_key_restore)))
-                .addOnClickListener(this);
-        ((ClickPreference)findPreference(getString(R.string.preferences_key_restore_alt)))
-                .addOnClickListener(this);
+        mSAFPreference.setOnPreferenceClickListener(this);
+        findPreference(getString(R.string.preferences_key_restore)).setOnPreferenceClickListener(this);
+        findPreference(getString(R.string.preferences_key_restore_alt)).setOnPreferenceClickListener(this);
         // Set a listener to the backup switch, which will start
         findPreference(getString(R.string.preferences_key_backup))
                 .setOnPreferenceChangeListener(new Preference.OnPreferenceChangeListener() {
@@ -151,7 +155,7 @@ public class SettingsFragment extends PreferenceFragment implements
     }
 
     @Override
-    public void onClick(Preference preference) {
+    public boolean onPreferenceClick(Preference preference) {
         if (preference == mSAFPreference) {
             // Allow the user to pick a file destination from the storage
             // access framework
@@ -164,16 +168,43 @@ public class SettingsFragment extends PreferenceFragment implements
             intent.putExtra(Intent.EXTRA_TITLE, getString(R.string.default_backup_filename));
             // Start the activity to get the file
             startActivityForResult(intent, REQUEST_CODE_CREATE_DOCUMENT);
+            return true;
         } else if (preference.getKey().equals(getString(R.string.preferences_key_restore))) {
+            // Prompt the user to confirm the restore
+            Dialogs.SimpleMessageDialogFragment.createSimpleMessageDialog(
+                        getString(R.string.restore_confirm_title),
+                        getString(R.string.restore_confirm_message))
+                    .setOnResultListener(this)
+                    .setRequestCode(REQUEST_CODE_RESTORE_BACKUP)
+                    .show(getFragmentManager(), TAG_RESTORE_BACKUP);
+            return true;
+        } else if (preference.getKey().equals(getString(R.string.preferences_key_restore_alt))) {
+            // Prompt the user to confirm the restore
+            Dialogs.SimpleMessageDialogFragment.createSimpleMessageDialog(
+                        getString(R.string.restore_confirm_title),
+                        getString(R.string.restore_confirm_message))
+                    .setOnResultListener(this)
+                    .setRequestCode(REQUEST_CODE_RESTORE_ALTERNATE_BACKUP)
+                    .show(getFragmentManager(), TAG_RESTORE_ALTERNATE_BACKUP);
+            return true;
+        }
+        // Return false is the preference was not handled above
+        return false;
+    }
+
+    @Override
+    public void onResult(int requestCode, int resultCode, Intent intent) {
+        if (requestCode == REQUEST_CODE_RESTORE_BACKUP && resultCode == Activity.RESULT_OK) {
             if (mBound) {
                 mRestoreService.restore();
             }
-        } else if (preference.getKey().equals(getString(R.string.preferences_key_restore_alt))) {
-            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
-            intent.addCategory(Intent.CATEGORY_OPENABLE);
-            intent.setType("*/*");//application/x-sqlite3");
-            intent.putExtra(Intent.EXTRA_TITLE, "*.db");
-            startActivityForResult(intent, REQUEST_CODE_OPEN_DOCUMENT);
+        } else if (requestCode == REQUEST_CODE_RESTORE_ALTERNATE_BACKUP &&
+                   resultCode == Activity.RESULT_OK) {
+            Intent openIntent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            openIntent.addCategory(Intent.CATEGORY_OPENABLE);
+            openIntent.setType("*/*");//application/x-sqlite3");
+            openIntent.putExtra(Intent.EXTRA_TITLE, "*.db");
+            startActivityForResult(openIntent, REQUEST_CODE_OPEN_DOCUMENT);
         }
     }
 

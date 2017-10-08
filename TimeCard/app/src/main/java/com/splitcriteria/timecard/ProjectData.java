@@ -11,6 +11,7 @@ import android.util.ArrayMap;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.ref.WeakReference;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -51,6 +52,7 @@ class ProjectData {
 
     private ProjectDataOpenHelper mDBHelper;
     private SQLiteDatabase mDatabase;
+    private WeakReference<Context> mContextRef;
 
     private static final int DATABASE_VERSION = 2;
     // Projects metadata table name and column names
@@ -78,6 +80,22 @@ class ProjectData {
         String defaultExtraData;
         int currentTimecard;
         String dataSummaryMethod;
+    }
+
+    class ExtendedMetadata {
+        boolean archived;
+        boolean trackLocation;
+        boolean noDuration;
+        boolean usesExtraData;
+        String defaultExtraData;
+        int currentTimecard;
+        String dataSummaryMethod;
+
+        String projectName;
+        int totalTime;
+        int metadataTime;
+        boolean clockedIn;
+        String dataSummary;
     }
 
     class Row {
@@ -109,8 +127,15 @@ class ProjectData {
         public void onUpgrade(SQLiteDatabase sqLiteDatabase, int oldVersion, int newVersion) {
             switch (oldVersion) {
                 case 1:
-                    sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
-                            KEY_DATA_SUMMARY_METHOD + " DEFAULT 'auto';");
+                    Context context = mContextRef.get();
+                    if (context != null) {
+                        sqLiteDatabase.execSQL("ALTER TABLE " + PROJECTS_TABLE + " ADD COLUMN " +
+                                KEY_DATA_SUMMARY_METHOD + " DEFAULT '" +
+                                context.getString(R.string.preferences_summary_type_default_value) +
+                                "';");
+                    } else {
+                        throw new RuntimeException("Missing Context: unable to upgrade database.");
+                    }
             }
         }
     }
@@ -121,6 +146,7 @@ class ProjectData {
      * @param context   a valid context
      */
     ProjectData(Context context) {
+        mContextRef = new WeakReference<>(context);
         // Make sure a lock can be acquired
         if (DatabaseLock.acquire(context, DatabaseLock.DATABASE)) {
             mDBHelper = new ProjectDataOpenHelper(
@@ -130,6 +156,7 @@ class ProjectData {
     }
 
     ProjectData(Context context, String dbName) {
+        mContextRef = new WeakReference<>(context);
         if (DatabaseLock.acquire(context, DatabaseLock.DATABASE)) {
             mDBHelper = new ProjectDataOpenHelper(context, dbName);
             mDatabase = mDBHelper.getWritableDatabase();
@@ -162,8 +189,50 @@ class ProjectData {
         return results;
     }
 
+    /**
+     * Returns the Metadata for a specific project
+     *
+     * @param projectName   a project name
+     * @return  Metadata for the project, or null if the project name doesn't exist
+     */
     Metadata getProjectMetadata(String projectName) {
         return projectName != null ? getMetadata().get(projectName) : null;
+    }
+
+    /**
+     * Returns extended metadata for a project
+     *
+     * @param projectName   a project name
+     * @return  ExtendedMetadata for a project
+     */
+    ExtendedMetadata getProjectExtendedMetadata(String projectName) {
+        Metadata metadata = getMetadata().get(projectName);
+        if (metadata != null) {
+            ExtendedMetadata extendedMetadata = new ExtendedMetadata();
+            extendedMetadata.archived = metadata.archived;
+            extendedMetadata.trackLocation = metadata.trackLocation;
+            extendedMetadata.currentTimecard = metadata.currentTimecard;
+            extendedMetadata.usesExtraData = metadata.usesExtraData;
+            extendedMetadata.defaultExtraData = metadata.defaultExtraData;
+            extendedMetadata.noDuration = metadata.noDuration;
+            extendedMetadata.dataSummaryMethod = metadata.dataSummaryMethod;
+            extendedMetadata.clockedIn = isClockedIn(projectName);
+            List<Row> rowData = getRows(projectName);
+            extendedMetadata.dataSummary = DataSummary.getSummary(
+                    mContextRef.get(), extendedMetadata.dataSummaryMethod, rowData);
+            extendedMetadata.totalTime = 0;
+            Calendar now = Calendar.getInstance(Locale.getDefault());
+            for (Row row : rowData) {
+                Calendar endTime = row.endTime == null ? now : row.endTime;
+                extendedMetadata.totalTime +=
+                        (int)((endTime.getTimeInMillis()-row.startTime.getTimeInMillis())/1000);
+            }
+            extendedMetadata.projectName = projectName;
+            extendedMetadata.metadataTime = (int)(now.getTimeInMillis() / 1000);
+            return extendedMetadata;
+        } else {
+            return null;
+        }
     }
 
     /**

@@ -34,11 +34,20 @@
     <string name="clock_in_instant">Mark Time</string>
 
     <string name="time_none">No time clocked yet!</string>
+    <string name="time_years">%1$d years %2$d days %3$d hr %4$d min %5$d sec</string>
     <string name="time_days">%1$d days %2$d hr %3$d min %4$d sec</string>
     <string name="time_hours">%1$d hr %2$d min %3$d sec</string>
     <string name="time_minutes">%1$d min %2$d sec</string>
     <string name="time_seconds">%1$d sec</string>
-    <string name="export">Export</string>
+    <string name="time_average">Avg: %1$s</string>
+    <string name="average_extra_data_none">Avg: None</string>
+    <string name="average_extra_data">Avg: %1$.2f</string>
+    <string name="preferences_summary_unknown">Data Summary Unavailable</string>
+
+    <string name="restore_confirm_title">Confirm Restore</string>
+    <string name="restore_confirm_message">Restoring a backup database will overwrite the current database. Are you sure?</string>
+
+    <string name="export">Export to CSV</string>
 
     <string name="notification_title_clock_out">%1$s</string>
     <string name="notification_text_clock_out">Click to clock out from %1$s</string>
@@ -139,13 +148,17 @@
         <item>Average Time</item>
         <item>Average Extra Data</item>
     </string-array>
+    <string name="preferences_summary_type_auto">auto</string>
+    <string name="preferences_summary_type_total_time">total_time</string>
+    <string name="preferences_summary_type_average_time">average_time</string>
+    <string name="preferences_summary_type_average_extra_data">average_extra_data</string>
     <string-array name="preferences_summary_type_values">
-        <item>auto</item>
-        <item>total_time</item>
-        <item>average_time</item>
-        <item>average_extra_data</item>
+        <item>@string/preferences_summary_type_auto</item>
+        <item>@string/preferences_summary_type_total_time</item>
+        <item>@string/preferences_summary_type_average_time</item>
+        <item>@string/preferences_summary_type_average_extra_data</item>
     </string-array>
-    <string name="preferences_summary_type_default_value">auto</string>
+    <string name="preferences_summary_type_default_value">@string/preferences_summary_type_auto</string>
 
     <string name="default_backup_filename">Timecard_backup.db</string>
     <string name="default_database_filename">projects.db</string>

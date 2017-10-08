@@ -12,6 +12,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.preference.EditTextPreference;
+import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceFragment;
 import android.preference.PreferenceManager;
@@ -118,6 +119,7 @@ public class ProjectSettingsFragment extends PreferenceFragment implements
         int valueIndex = summaryValues.indexOf(metadata.dataSummaryMethod);
         preference.setSummary(getString(R.string.preferences_project_summary_description,
                 summaryMethods[valueIndex]));
+        ((ListPreference)preference).setValue(metadata.dataSummaryMethod);
     }
 
     @Override

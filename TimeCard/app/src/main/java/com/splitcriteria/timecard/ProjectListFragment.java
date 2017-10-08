@@ -102,31 +102,6 @@ public class ProjectListFragment extends ResultFragment implements
         RecyclerView.LayoutManager layoutManager = new LinearLayoutManager(getActivity());
         mRecyclerView.setLayoutManager(layoutManager);
 
-//        // Set up the gesture detector to open the ProjectActivity on a user click
-//        mGestures = new GestureDetectorCompat(getActivity(), new GestureDetector.SimpleOnGestureListener() {
-//            @Override
-//            public boolean onSingleTapUp(MotionEvent e) {
-//                View clicked = mRecyclerView.findChildViewUnder(e.getX(), e.getY());
-//                if (clicked != null) {
-//                    TextView tv = clicked.findViewById(R.id.name);
-//                    String projectName = tv.getText().toString();
-//                    openProjectActivity(projectName);
-//                    return true;
-//                } else {
-//                    return false;
-//                }
-//            }
-//        });
-
-//        // Add a OnItemTouchListener to collect information for the GestureDetector
-//        mRecyclerView.addOnItemTouchListener(new RecyclerView.SimpleOnItemTouchListener() {
-//            @Override
-//            public boolean onInterceptTouchEvent(RecyclerView rv, MotionEvent e) {
-//                mGestures.onTouchEvent(e);
-//                return super.onInterceptTouchEvent(rv, e);
-//            }
-//        });
-
         // Create an ItemTouchHelper to handle swipe events for current projects (i.e. allow
         // user to swipe right to archive a project)
         mCurrentProjectsItemTouchHelper = new ItemTouchHelper(
@@ -158,7 +133,7 @@ public class ProjectListFragment extends ResultFragment implements
                         public void onClick(View view) {
                             // The project is only archived after the dismissal, so we
                             // just need to add the project name back to the adapter
-                            mAdapter.add(projectName);
+                            mAdapter.add(getActivity(), projectName);
                         }
                     });
                     sb.addCallback(new Snackbar.Callback() {
@@ -213,7 +188,7 @@ public class ProjectListFragment extends ResultFragment implements
                             public void onClick(View view) {
                                 // The project is only deleted/un-archived after the dismissal,
                                 // so we just need to add the project name back to the adapter
-                                mAdapter.add(projectName);
+                                mAdapter.add(getActivity(), projectName);
                             }
                         });
                         // Add a callback to handle the deletion or un-archive after the
@@ -252,7 +227,7 @@ public class ProjectListFragment extends ResultFragment implements
     @Override
     public void onResume() {
         super.onResume();
-        mAdapter.addOnProjectClickedListener(this);
+        refreshProjectNames();
     }
 
     @Override
@@ -263,7 +238,8 @@ public class ProjectListFragment extends ResultFragment implements
 
     private void refreshProjectNames() {
         ProjectData projectData = new ProjectData(getActivity());
-        mAdapter = new ProjectAdapter(projectData.getProjectNames(mShowingArchived));
+        mAdapter = new ProjectAdapter(getActivity(), mShowingArchived);
+        mAdapter.addOnProjectClickedListener(this);
         projectData.close(getActivity());
         mRecyclerView.swapAdapter(mAdapter, true);
         if (mShowingArchived) {

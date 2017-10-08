@@ -44,7 +44,7 @@ import java.util.Locale;
  * provides common use cases.
  */
 
-public class Dialogs {
+class Dialogs {
 
     /**
      * Dialog Fragment designed to display a message to a user
