@@ -18,5 +18,5 @@
     <dimen name="edit_cell_time_width">90dp</dimen>
     <dimen name="edit_cell_extra_width">150dp</dimen>
     <dimen name="edit_cell_border_width">1dp</dimen>
-    <dimen name="edit_cell_text_size">20sp</dimen>
+    <dimen name="edit_cell_text_size">16sp</dimen>
 </resources>
