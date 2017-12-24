@@ -1,12 +1,15 @@
 package com.splitcriteria.timecard;
 
+import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.RemoteInput;
 import android.text.TextUtils;
@@ -221,6 +224,30 @@ public class ProjectReceiver extends BroadcastReceiver {
         return null;
     }
 
+    /**
+     * Creates a notification channel if the build version is equal to Oreo or higher.
+     *
+     * @param context   Context
+     * @param projectName   a project name to use as the channel ID
+     * @param sticky    true if this notification will be a sticky notificatino
+     * @return  true if a notification channel was created (i.e. build is Oreo or greater)
+     */
+    private boolean createNotificationChannel(Context context, String projectName, boolean sticky) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            return false;
+        } else {
+            NotificationManager notificationManager =
+                    (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            String description = context.getString(sticky ?
+                    R.string.notification_channel_description_sticky :
+                    R.string.notification_channel_description_default, projectName);
+            NotificationChannel notificationChannel = new NotificationChannel(
+                    projectName, description, NotificationManager.IMPORTANCE_HIGH);
+            notificationManager.createNotificationChannel(notificationChannel);
+            return true;
+        }
+    }
+
     private String getStickyNotificationMessage(Context context,
                                                 ProjectData.Metadata metadata,
                                                 String extraData,
@@ -278,13 +305,15 @@ public class ProjectReceiver extends BroadcastReceiver {
     }
 
     private void postNotification(Context context, String projectName) {
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
+        // Create the notification channel (if Oreo or greater)
+        createNotificationChannel(context, projectName, false);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, projectName)
                 .setSmallIcon(R.drawable.ic_clock_out)
                 .setContentTitle(
                         context.getString(R.string.notification_title_clock_out, projectName))
                 .setContentText(
                         context.getString(R.string.notification_text_clock_out, projectName))
-                .setChannel(projectName)
                 .setAutoCancel(true)
                 .setOngoing(true);
 
@@ -301,6 +330,9 @@ public class ProjectReceiver extends BroadcastReceiver {
     }
 
     private void postStickyNotification(Context context, String projectName, String message) {
+        // Create the notification channel (if Oreo or greater)
+        createNotificationChannel(context, projectName, true);
+
         // Configure the remote input for the notification
         RemoteInput remoteInput = new RemoteInput.Builder(KEY_EXTRA_DATA)
                 .setLabel(context.getString(R.string.notification_extra_data_instruction))
@@ -349,12 +381,11 @@ public class ProjectReceiver extends BroadcastReceiver {
                 .build();
 
         // Build the notification
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(context)
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(context, projectName)
                 .setSmallIcon(R.drawable.ic_mark_notification)
                 .setContentTitle(
                         context.getString(R.string.notification_title_clock_out, projectName))
                 .setContentText(message)
-                .setChannel(projectName)
                 .addAction(clockInOut);
         if (!isClockedIn) {
             builder.addAction(getExtraData);

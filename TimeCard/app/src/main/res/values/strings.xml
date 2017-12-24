@@ -70,6 +70,8 @@
     <string name="notification_action_dismiss">Dismiss</string>
     <string name="notification_row_deleted">Deleted event</string>
     <string name="notification_project_renamed">Project renamed to \'%1$s\'</string>
+    <string name="notification_channel_description_sticky">A persistent notification for the %1$s project in Time Card</string>
+    <string name="notification_channel_description_default">A clock out notification for the %1$s project in Time Card</string>
 
     <string name="menu_title">Time Card</string>
     <string name="menu_current_projects">Current</string>
