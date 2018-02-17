@@ -160,16 +160,22 @@ class DataSummary {
                                      dateFormat.format(firstStartTime.getTime()));
         } else if (summaryMethod.equals(
                 context.getString(R.string.preferences_summary_type_frequency))) {
-            // Calculate the average frequency
-            int totalPeriod = 0;
-            for (Integer period : periods) {
-                totalPeriod += period;
+            // The frequency can only be calculated if there is more than 1 occurrence
+            // If only 1 occurrence exists, then it cannot be calculated
+            if (count < 2) {
+                return context.getString(R.string.data_summary_unknown);
+            } else {
+                // Calculate the average frequency
+                int totalPeriod = 0;
+                for (Integer period : periods) {
+                    totalPeriod += period;
+                }
+                int averagePeriod = totalPeriod / (count-1);
+                lastEndTime.add(Calendar.SECOND, averagePeriod);
+                return context.getString(R.string.data_summary_frequency_and_next_occurrence,
+                        getTimeText(context, averagePeriod),
+                        dateFormat.format(lastEndTime.getTime()));
             }
-            int averagePeriod = totalPeriod / count;
-            lastEndTime.add(Calendar.SECOND, averagePeriod);
-            return context.getString(R.string.data_summary_frequency_and_next_occurrence,
-                                     getTimeText(context, averagePeriod),
-                                     dateFormat.format(lastEndTime.getTime()));
         } else {
             return context.getString(R.string.data_summary_unknown);
         }
