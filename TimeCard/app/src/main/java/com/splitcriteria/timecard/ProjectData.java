@@ -396,6 +396,7 @@ class ProjectData {
         }
         ContentValues cv = new ContentValues();
         cv.put(KEY_PROJECT_NAME, project);
+        cv.put(KEY_DISPLAY_NAME, project);
         // Insert the project metadata
         long rowid = mDatabase.insert(PROJECTS_TABLE, null, cv);
         // Insert a new project table

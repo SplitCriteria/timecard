@@ -57,8 +57,8 @@ class ProjectAdapter extends RecyclerView.Adapter<ProjectAdapter.ViewHolder> imp
     private Comparator<DataGroup> mIgnoreCaseComparator = new Comparator<DataGroup>() {
                 @Override
                 public int compare(DataGroup dg0, DataGroup dg1) {
-                    return dg0.extendedMetadata.metadata.projectName.compareToIgnoreCase(
-                            dg1.extendedMetadata.metadata.projectName);
+                    return dg0.extendedMetadata.metadata.displayName.compareToIgnoreCase(
+                            dg1.extendedMetadata.metadata.displayName);
                 }
             };
 
