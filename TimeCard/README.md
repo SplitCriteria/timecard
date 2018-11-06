@@ -36,6 +36,7 @@ Examples:
 
 ## Errors to Fix
 - [ ] If data deleted (in Edit mode) the remaining rows in the adapter don't account for the missing data (if others are edited, their row number is off by one)
+- [ ] Clocking out of a non-instant timecard (with extra data) asks for extra data again
 - [x] New projects start show the name "auto" instead of the actual name
 - [x] Project rows are sorted according to display name instead of project name
 - [x] Frequency & Next Occurrence summary incorrectly calculates the frequency
